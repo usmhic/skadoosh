@@ -1,0 +1,32 @@
+{
+  "name": "@skaddosh/auth",
+  "version": "0.1.0",
+  "private": true,
+  "exports": {
+    "./server": {
+      "import": "./src/server.ts",
+      "require": "./src/server.ts"
+    },
+    "./client": {
+      "import": "./src/client.ts",
+      "require": "./src/client.ts"
+    },
+    "./mailer": {
+      "import": "./src/mailer.ts",
+      "require": "./src/mailer.ts"
+    }
+  },
+  "dependencies": {
+    "@better-auth/core": "1.6.10",
+    "@better-auth/drizzle-adapter": "1.6.10",
+    "@better-auth/expo": "1.6.10",
+    "@skaddosh/db": "workspace:*",
+    "better-auth": "1.6.10",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@skaddosh/typescript-config": "workspace:*",
+    "@types/node": "22.0.0",
+    "typescript": "5.9.3"
+  }
+}

@@ -1,0 +1,16 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+
+allowBuilds:
+  esbuild: true
+  sharp: true
+
+overrides:
+  typescript: "5.9.3"
+  better-auth: "1.6.14"
+  "@better-auth/core": "1.6.14"
+  "@better-auth/drizzle-adapter": "1.6.14"
+  "@better-auth/expo": "1.6.14"
+  "@better-auth/utils": "0.4.0"
+  drizzle-orm: "0.45.2"

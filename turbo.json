@@ -1,0 +1,39 @@
+{
+  "globalEnv": [
+    "DATABASE_URL",
+    "BETTER_AUTH_URL",
+    "BETTER_AUTH_SECRET",
+    "NEXT_PUBLIC_APP_URL",
+    "MOBILE_APP_API_URL",
+    "MOBILE_APP_SCHEME",
+    "EAS_PROJECT_ID",
+    "GOOGLE_CLIENT_ID",
+    "GOOGLE_CLIENT_SECRET",
+    "APPLE_CLIENT_ID",
+    "APPLE_CLIENT_SECRET",
+    "NEXT_PUBLIC_PADDLE_ENV",
+    "PADDLE_ENV",
+    "NEXT_PUBLIC_PADDLE_CLIENT_TOKEN",
+    "NEXT_PUBLIC_PADDLE_PRICE_ID",
+    "PADDLE_PRICE_ID",
+    "PADDLE_API_KEY",
+    "PADDLE_WEBHOOK_SECRET",
+    "OPENAI_API_KEY",
+    "OPENAI_MODEL"
+  ],
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "inputs":    ["$TURBO_DEFAULT$", ".env*"],
+      "outputs":   [".next/**", "!.next/cache/**", "dist/**"]
+    },
+    "dev":        { "cache": false, "persistent": true },
+    "start":      { "cache": false, "persistent": true },
+    "lint":       { "dependsOn": ["^lint"] },
+    "db:generate":{ "cache": false },
+    "db:migrate": { "cache": false },
+    "db:push":    { "cache": false },
+    "db:seed":    { "cache": false },
+    "db:studio":  { "cache": false, "persistent": true }
+  }
+}

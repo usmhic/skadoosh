@@ -1,0 +1,8 @@
+{
+  "extends": "@skaddosh/typescript-config/react-library.json",
+  "compilerOptions": {
+    "paths": { "@skaddosh/ui/*": ["./src/*"] }
+  },
+  "include": ["src"],
+  "exclude": ["node_modules", "dist"]
+}

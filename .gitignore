@@ -1,0 +1,64 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+.pnpm-store/
+
+# Local environment and secret material
+.env
+.env.*
+*.env
+*.env.*
+.envrc
+.envrc.*
+.direnv/
+.flaskenv
+.flaskenv.*
+.streamlit/secrets.toml
+!/.env.example
+
+# Build outputs
+.next/
+out/
+build/
+dist/
+coverage/
+*.tsbuildinfo
+
+# SQLite database
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Turbo / cache
+.turbo/
+.cache/
+
+# Expo / EAS local artifacts
+.expo/
+.expo-shared/
+eas-build-local-*
+
+# Generated framework files
+next-env.d.ts
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Editor
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+
+# Misc
+.vercel

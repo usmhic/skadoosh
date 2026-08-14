@@ -1,0 +1,39 @@
+{
+  "name": "skaddosh",
+  "version": "0.1.0",
+  "description": "A multilingual publishing, reading, and creator-portfolio platform.",
+  "private": true,
+  "license": "MIT",
+  "author": {
+    "name": "usmhic",
+    "url": "https://github.com/usmhic"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/usmhic/skadoosh.git"
+  },
+  "scripts": {
+    "build": "node scripts/with-root-env.mjs turbo build",
+    "dev": "pnpm db:prepare && node scripts/with-root-env.mjs turbo dev",
+    "dev:web": "pnpm db:prepare && node scripts/with-root-env.mjs turbo dev --filter=@skaddosh/web",
+    "dev:mobile": "pnpm db:prepare && node scripts/with-root-env.mjs turbo dev --filter=@skaddosh/mobile",
+    "start": "pnpm db:deploy && node scripts/with-root-env.mjs turbo start --filter=@skaddosh/web",
+    "db:sync": "node scripts/db-lifecycle.mjs sync",
+    "db:prepare": "pnpm db:sync && pnpm db:seed",
+    "db:deploy": "node scripts/db-lifecycle.mjs deploy",
+    "postinstall": "node scripts/postinstall.mjs",
+    "lint": "node scripts/with-root-env.mjs turbo lint",
+    "format": "prettier --write \"**/*.{ts,tsx,md}\"",
+    "db:generate": "node scripts/with-root-env.mjs turbo db:generate",
+    "db:migrate": "node scripts/with-root-env.mjs turbo db:migrate",
+    "db:push": "node scripts/with-root-env.mjs turbo db:push",
+    "db:seed": "node scripts/with-root-env.mjs turbo db:seed",
+    "db:studio": "node scripts/with-root-env.mjs turbo db:studio"
+  },
+  "devDependencies": {
+    "prettier": "3.4.0",
+    "turbo": "2.3.0",
+    "typescript": "5.9.3"
+  },
+  "packageManager": "pnpm@11.6.0"
+}

@@ -1,0 +1,42 @@
+{
+  "name": "@skaddosh/web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "NEXT_IGNORE_INCORRECT_LOCKFILE=1 node ../../scripts/with-root-env.mjs next dev",
+    "build": "NEXT_IGNORE_INCORRECT_LOCKFILE=1 node ../../scripts/with-root-env.mjs next build",
+    "start": "NEXT_IGNORE_INCORRECT_LOCKFILE=1 node ../../scripts/with-root-env.mjs next start",
+    "lint": "node ../../scripts/with-root-env.mjs tsc --noEmit"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1057.0",
+    "@skaddosh/api": "workspace:*",
+    "@skaddosh/auth": "workspace:*",
+    "@skaddosh/db": "workspace:*",
+    "@skaddosh/i18n": "workspace:*",
+    "@skaddosh/ui": "workspace:*",
+    "@tanstack/react-query": "5.100.9",
+    "@trpc/client": "11.0.0",
+    "@trpc/react-query": "11.0.0",
+    "@trpc/server": "11.0.0",
+    "better-auth": "1.6.14",
+    "drizzle-orm": "0.45.2",
+    "i18next": "25.6.0",
+    "lucide-react": "0.563.0",
+    "next": "16.2.6",
+    "next-themes": "0.4.4",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "react-i18next": "15.7.4",
+    "superjson": "1.13.3"
+  },
+  "devDependencies": {
+    "@skaddosh/typescript-config": "workspace:*",
+    "@tailwindcss/postcss": "4.1.18",
+    "@types/node": "22.0.0",
+    "@types/react": "19.2.10",
+    "@types/react-dom": "19.2.3",
+    "tailwindcss": "4.1.18",
+    "typescript": "5.9.3"
+  }
+}

@@ -1,0 +1,14 @@
+import type { Config } from "drizzle-kit";
+
+const databaseUrl = process.env.DATABASE_URL;
+
+if (!databaseUrl) {
+  throw new Error("DATABASE_URL is not configured. Set it in the root .env file.");
+}
+
+export default {
+  schema:  "./src/schema.ts",
+  out:     "./drizzle",
+  dialect: "postgresql",
+  dbCredentials: { url: databaseUrl },
+} satisfies Config;
