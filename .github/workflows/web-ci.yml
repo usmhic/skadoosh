@@ -2,7 +2,7 @@ name: CI - Web
 
 on:
   push:
-    branches: [dev]
+    branches: [main, dev]
   pull_request:
     branches: [main, dev]
   workflow_dispatch:
@@ -74,9 +74,9 @@ jobs:
           images: ghcr.io/${{ github.repository }}
           tags: |
             type=sha,prefix=sha-,format=short
-            type=ref,event=branch
             type=ref,event=tag
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=dev,enable=${{ github.ref == 'refs/heads/dev' }}
             type=raw,value=ci,enable=${{ github.event_name != 'pull_request' && !startsWith(github.ref, 'refs/tags/') }}
             type=raw,value=${{ inputs.image_tag }},enable=${{ inputs.image_tag != '' }}
 
