@@ -72,10 +72,12 @@ export const auth = betterAuth({
   },
 
   trustedOrigins: [
-    process.env.BETTER_AUTH_URL     ?? "http://localhost:3000",
-    process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
-    process.env.MOBILE_APP_API_URL,
-    process.env.MOBILE_APP_SCHEME ? `${process.env.MOBILE_APP_SCHEME}://` : undefined,
+    process.env.BETTER_AUTH_URL     ?? "https://skadoosh.osas.cloud",
+    process.env.NEXT_PUBLIC_APP_URL ?? "https://skadoosh.osas.cloud",
+    process.env.MOBILE_APP_API_URL  ?? "https://skadoosh.osas.cloud",
+    process.env.MOBILE_APP_SCHEME
+      ? `${process.env.MOBILE_APP_SCHEME}://`
+      : "skaddosh://",
   ].filter((v): v is string => Boolean(v)),
 });
 

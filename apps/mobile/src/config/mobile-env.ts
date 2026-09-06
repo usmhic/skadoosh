@@ -9,7 +9,7 @@ const mobileEnv = {
    */
   localWebUrl: "http://localhost:3000",
   androidEmulatorWebUrl: "http://10.0.2.2:3000",
-  localNetworkWebUrl: process.env.EXPO_PUBLIC_API_URL ?? "",
+  localNetworkWebUrl: process.env.EXPO_PUBLIC_API_URL ?? "https://skadoosh.osas.cloud",
   appScheme: process.env.EXPO_PUBLIC_APP_SCHEME ?? "skaddosh",
   requestTimeoutMs: 30000,
 } as const;

@@ -139,6 +139,7 @@ Required GitHub secrets/vars:
 - [Contributing](./CONTRIBUTING.md) — local setup, branch conventions, coding standards, release process
 - [Architecture](./ARCHITECTURE.md) — how the pieces fit together, directory purposes
 - [Engineering standards](./STANDARDS.md) — shared conventions across every project in this workspace
+- [Package naming](./PACKAGE_NAMING.md) — package scopes and the intentional `skadoosh` repository / `skaddosh` product spelling
 - [Coding-agent guide](./AGENTS.md) — repository map, commands, and guardrails
 - [Security policy](./SECURITY.md) — private vulnerability reporting and deployment notes
 - [Web app](./apps/web)

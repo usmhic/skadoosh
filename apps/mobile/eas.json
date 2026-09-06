@@ -10,7 +10,8 @@
     },
     "preview": {
       "distribution": "internal",
-      "channel": "preview",
+      "node": "22.13.1",
+      "env": { "NODE_ENV": "production" },
       "autoIncrement": true,
       "android": {
         "buildType": "apk"
@@ -18,7 +19,8 @@
     },
     "test": {
       "distribution": "store",
-      "channel": "test",
+      "node": "22.13.1",
+      "env": { "NODE_ENV": "production" },
       "autoIncrement": true,
       "ios": {
         "simulator": false
@@ -27,9 +29,19 @@
         "buildType": "app-bundle"
       }
     },
+    "open-testing": {
+      "distribution": "store",
+      "node": "22.13.1",
+      "env": { "NODE_ENV": "production" },
+      "autoIncrement": true,
+      "android": {
+        "buildType": "app-bundle"
+      }
+    },
     "production": {
       "distribution": "store",
-      "channel": "production",
+      "node": "22.13.1",
+      "env": { "NODE_ENV": "production" },
       "autoIncrement": true,
       "android": {
         "buildType": "app-bundle"
@@ -39,6 +51,12 @@
   "submit": {
     "test": {
       "ios": {},
+      "android": {
+        "track": "internal",
+        "releaseStatus": "draft"
+      }
+    },
+    "open-testing": {
       "android": {
         "track": "internal",
         "releaseStatus": "draft"

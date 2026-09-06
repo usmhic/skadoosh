@@ -14,7 +14,7 @@ const expoConfig: ExpoConfig = {
     bundleIdentifier: "app.skaddosh.mobile",
   },
   android: {
-    package: "app.skaddosh.mobile",
+    package: "com.osascloud.skadoosh",
     adaptiveIcon: {
       foregroundImage: "./assets/brand/logo.png",
       backgroundColor: "#101417",
@@ -22,7 +22,7 @@ const expoConfig: ExpoConfig = {
   },
   extra: {
     eas: {
-      projectId: process.env.EAS_PROJECT_ID,
+      projectId: process.env.EAS_PROJECT_ID ?? "001bbc18-9439-4d57-8c38-8348a0a444b1",
     },
   },
 };

@@ -29,6 +29,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Replaced the private Metro exclusion-list import with the supported block-list configuration and set `NODE_ENV=production` for EAS release builds.
+- Aligned the mobile workspace with Expo SDK 55, added the required `react-dom` peer dependency, and removed the conflicting static Expo config so native builds use one validated configuration.
+- Standardized the Android application ID to `com.osascloud.skadoosh` for Google Play releases.
+- Pinned Android EAS builds to Node 22.13.1 for compatibility with the workspace's pnpm 11.6.0 toolchain and removed unused OTA channel settings from store profiles.
+- Added a documented package-naming contract for the `@skaddosh/*` workspace scope and product/repository spelling exception.
 - Recreated the database history as one generated `0000_initial.sql` baseline,
   with matching Drizzle journal and snapshot metadata for clean deployments.
 - Aligned package, web, container, Compose, and workflow metadata with the
