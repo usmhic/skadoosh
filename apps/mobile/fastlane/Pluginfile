@@ -1,0 +1,2 @@
+# Fastlane plugins. Installed by `bundle install` via the eval_gemfile line in ../Gemfile.
+gem "fastlane-plugin-firebase_app_distribution"

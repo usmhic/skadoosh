@@ -1,0 +1,106 @@
+####################################################################
+# iOS → Ad Hoc IPA → Firebase App Distribution
+#
+# Deliberately MANUAL-ONLY (workflow_dispatch). The App Distribution
+# path for iOS is fully configured and ready, but pushes to `dev`
+# distribute Android only, as specified. To start distributing iOS on
+# every dev push, uncomment the `push:` trigger below — nothing else
+# needs to change.
+####################################################################
+name: Dev - Mobile iOS (App Distribution)
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_notes:
+        description: "Release notes shown to testers in App Tester"
+        required: false
+        type: string
+  # push:
+  #   branches: [dev]
+  #   paths:
+  #     - "mobile/**"
+  #     - ".github/workflows/mobile-ios-dev.yml"
+
+concurrency:
+  group: mobile-ios-dev-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  distribute:
+    name: Build & distribute to testers
+    runs-on: macos-14
+    environment: development
+    defaults:
+      run:
+        working-directory: apps/mobile
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.6.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install workspace dependencies
+        working-directory: .
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+          working-directory: apps/mobile
+
+      - name: Prebuild native iOS project
+        env:
+          MOBILE_BUILD_NUMBER: ${{ github.run_number }}
+          EXPO_PUBLIC_API_URL: ${{ vars.DEV_API_URL || 'http://localhost:5000' }}
+        run: npx expo prebuild --platform ios --no-install
+
+      - name: Decode Ad Hoc signing assets and Firebase service account
+        run: |
+          echo "$IOS_ADHOC_CERTIFICATE_P12_BASE64" | base64 --decode > "$RUNNER_TEMP/adhoc_cert.p12"
+          echo "$IOS_ADHOC_PROVISIONING_PROFILE_BASE64" | base64 --decode > "$RUNNER_TEMP/adhoc.mobileprovision"
+          echo "$FIREBASE_SERVICE_ACCOUNT_JSON" > "$RUNNER_TEMP/firebase-service-account.json"
+        env:
+          IOS_ADHOC_CERTIFICATE_P12_BASE64: ${{ secrets.IOS_ADHOC_CERTIFICATE_P12_BASE64 }}
+          IOS_ADHOC_PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_ADHOC_PROVISIONING_PROFILE_BASE64 }}
+          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+
+      - name: Build & distribute (fastlane ios_dev)
+        run: bundle exec fastlane ios ios_dev
+        env:
+          CI: true
+          MATCH_KEYCHAIN_NAME: fastlane_tmp_keychain
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+          IOS_ADHOC_CERTIFICATE_PATH: ${{ runner.temp }}/adhoc_cert.p12
+          IOS_ADHOC_CERTIFICATE_PASSWORD: ${{ secrets.IOS_ADHOC_CERTIFICATE_PASSWORD }}
+          IOS_ADHOC_PROVISIONING_PROFILE_PATH: ${{ runner.temp }}/adhoc.mobileprovision
+          IOS_ADHOC_PROFILE_NAME: ${{ vars.IOS_ADHOC_PROFILE_NAME }}
+          IOS_BUNDLE_IDENTIFIER: ${{ vars.IOS_BUNDLE_IDENTIFIER || 'app.skaddosh.mobile' }}
+          APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
+          FIREBASE_IOS_APP_ID: ${{ secrets.FIREBASE_IOS_APP_ID }}
+          FIREBASE_SERVICE_ACCOUNT_JSON_PATH: ${{ runner.temp }}/firebase-service-account.json
+          FIREBASE_TESTER_GROUPS: ${{ vars.FIREBASE_TESTER_GROUPS }}
+          FIREBASE_RELEASE_NOTES: >-
+            ${{ inputs.release_notes || format('dev {0}', github.sha) }}
+
+      - name: Remove decoded credentials
+        if: always()
+        run: rm -f "$RUNNER_TEMP/adhoc_cert.p12" "$RUNNER_TEMP/adhoc.mobileprovision" "$RUNNER_TEMP/firebase-service-account.json"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: skadoosh-ios-dev-${{ github.run_number }}
+          path: apps/mobile/build/*.ipa
+          retention-days: 30

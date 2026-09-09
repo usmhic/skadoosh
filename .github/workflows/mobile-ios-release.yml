@@ -1,0 +1,96 @@
+####################################################################
+# main branch → signed App Store IPA → App Store Connect
+#
+# Independent of the Android release pipeline: if the Play upload
+# fails, this one is unaffected, and vice versa.
+####################################################################
+name: Release - Mobile iOS (App Store)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "mobile/**"
+      - ".github/workflows/mobile-ios-release.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: mobile-ios-release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    name: Build & publish to App Store Connect
+    runs-on: macos-14
+    environment: production
+    defaults:
+      run:
+        working-directory: apps/mobile
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.6.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install workspace dependencies
+        working-directory: .
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+          working-directory: apps/mobile
+
+      - name: Prebuild native iOS project
+        env:
+          MOBILE_BUILD_NUMBER: ${{ github.run_number }}
+          EXPO_PUBLIC_API_URL: ${{ vars.PROD_API_URL || 'https://api.skaddosh.com' }}
+        run: npx expo prebuild --platform ios --no-install
+
+      - name: Decode signing certificate, provisioning profile, and API key
+        run: |
+          echo "$IOS_DISTRIBUTION_CERTIFICATE_P12_BASE64" | base64 --decode > "$RUNNER_TEMP/distribution_cert.p12"
+          echo "$IOS_APPSTORE_PROVISIONING_PROFILE_BASE64" | base64 --decode > "$RUNNER_TEMP/appstore.mobileprovision"
+          echo "$APPSTORE_CONNECT_API_KEY_BASE64" | base64 --decode > "$RUNNER_TEMP/appstore_connect_api_key.p8"
+        env:
+          IOS_DISTRIBUTION_CERTIFICATE_P12_BASE64: ${{ secrets.IOS_DISTRIBUTION_CERTIFICATE_P12_BASE64 }}
+          IOS_APPSTORE_PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_APPSTORE_PROVISIONING_PROFILE_BASE64 }}
+          APPSTORE_CONNECT_API_KEY_BASE64: ${{ secrets.APPSTORE_CONNECT_API_KEY_BASE64 }}
+
+      - name: Build & upload (fastlane ios_release)
+        run: bundle exec fastlane ios ios_release
+        env:
+          CI: true
+          MATCH_KEYCHAIN_NAME: fastlane_tmp_keychain
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+          IOS_DISTRIBUTION_CERTIFICATE_PATH: ${{ runner.temp }}/distribution_cert.p12
+          IOS_DISTRIBUTION_CERTIFICATE_PASSWORD: ${{ secrets.IOS_DISTRIBUTION_CERTIFICATE_PASSWORD }}
+          IOS_APPSTORE_PROVISIONING_PROFILE_PATH: ${{ runner.temp }}/appstore.mobileprovision
+          IOS_APPSTORE_PROFILE_NAME: ${{ vars.IOS_APPSTORE_PROFILE_NAME }}
+          IOS_BUNDLE_IDENTIFIER: ${{ vars.IOS_BUNDLE_IDENTIFIER || 'app.skaddosh.mobile' }}
+          APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
+          APPSTORE_CONNECT_API_KEY_ID: ${{ secrets.APPSTORE_CONNECT_API_KEY_ID }}
+          APPSTORE_CONNECT_API_ISSUER_ID: ${{ secrets.APPSTORE_CONNECT_API_ISSUER_ID }}
+          APPSTORE_CONNECT_API_KEY_PATH: ${{ runner.temp }}/appstore_connect_api_key.p8
+
+      - name: Remove decoded credentials
+        if: always()
+        run: rm -f "$RUNNER_TEMP/distribution_cert.p12" "$RUNNER_TEMP/appstore.mobileprovision" "$RUNNER_TEMP/appstore_connect_api_key.p8"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: skadoosh-ios-release-${{ github.run_number }}
+          path: apps/mobile/build/*.ipa
+          retention-days: 90

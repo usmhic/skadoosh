@@ -1,0 +1,9 @@
+for_platform :ios do
+  app_identifier(ENV["IOS_BUNDLE_IDENTIFIER"] || "app.skaddosh.mobile")
+  team_id(ENV["APPLE_TEAM_ID"]) if ENV["APPLE_TEAM_ID"]
+end
+
+for_platform :android do
+  package_name(ENV["ANDROID_PACKAGE_NAME"] || "com.osascloud.skadoosh")
+  json_key_file(ENV["GOOGLE_PLAY_JSON_KEY_PATH"]) if ENV["GOOGLE_PLAY_JSON_KEY_PATH"]
+end

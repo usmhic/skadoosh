@@ -1,0 +1,8 @@
+source "https://rubygems.org"
+
+gem "fastlane"
+
+# Fastlane plugins live in fastlane/Pluginfile (firebase_app_distribution, used
+# by the dev-branch tester builds).
+plugins_path = File.join(File.dirname(__FILE__), "fastlane", "Pluginfile")
+eval_gemfile(plugins_path) if File.exist?(plugins_path)

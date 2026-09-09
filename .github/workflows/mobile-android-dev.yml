@@ -1,0 +1,131 @@
+####################################################################
+# dev branch → signed Android APK → Firebase App Distribution
+#
+# This is the only pipeline that fires automatically on `dev`. The iOS
+# equivalent (mobile-ios-dev.yml) is fully configured but manual-only,
+# by design — see MOBILE_DELIVERY.md.
+####################################################################
+name: Dev - Mobile Android (App Distribution)
+
+on:
+  push:
+    branches: [dev]
+    paths:
+      - "mobile/**"
+      - ".github/workflows/mobile-android-dev.yml"
+  workflow_dispatch:
+    inputs:
+      release_notes:
+        description: "Release notes shown to testers in App Tester"
+        required: false
+        type: string
+
+concurrency:
+  group: mobile-android-dev-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    name: Type-check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mobile
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.6.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install workspace dependencies
+        working-directory: .
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Type-check
+        working-directory: .
+        run: ./node_modules/.bin/tsc -p apps/mobile/tsconfig.json --noEmit
+
+  distribute:
+    name: Build & distribute to testers
+    runs-on: ubuntu-latest
+    needs: checks
+    environment: development
+    defaults:
+      run:
+        working-directory: apps/mobile
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.6.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install workspace dependencies
+        working-directory: .
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+          working-directory: apps/mobile
+
+      - name: Prebuild native Android project
+        env:
+          MOBILE_BUILD_NUMBER: ${{ github.run_number }}
+          EXPO_PUBLIC_API_URL: ${{ vars.DEV_API_URL || 'http://localhost:5000' }}
+        run: npx expo prebuild --platform android --no-install
+
+      - name: Decode signing keystore and Firebase service account
+        run: |
+          echo "$ANDROID_INTERNAL_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/internal.keystore"
+          echo "$FIREBASE_SERVICE_ACCOUNT_JSON" > "$RUNNER_TEMP/firebase-service-account.json"
+        env:
+          ANDROID_INTERNAL_KEYSTORE_BASE64: ${{ secrets.ANDROID_INTERNAL_KEYSTORE_BASE64 }}
+          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+
+      - name: Build & distribute (fastlane android_dev)
+        run: bundle exec fastlane android android_dev
+        env:
+          ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/internal.keystore
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_INTERNAL_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_INTERNAL_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_INTERNAL_KEY_PASSWORD }}
+          FIREBASE_ANDROID_APP_ID: ${{ secrets.FIREBASE_ANDROID_APP_ID }}
+          FIREBASE_SERVICE_ACCOUNT_JSON_PATH: ${{ runner.temp }}/firebase-service-account.json
+          FIREBASE_TESTER_GROUPS: ${{ vars.FIREBASE_TESTER_GROUPS }}
+          FIREBASE_RELEASE_NOTES: >-
+            ${{ inputs.release_notes || format('dev {0} — {1}', github.sha, github.event.head_commit.message) }}
+
+      - name: Remove decoded credentials
+        if: always()
+        run: rm -f "$RUNNER_TEMP/internal.keystore" "$RUNNER_TEMP/firebase-service-account.json"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: skadoosh-android-dev-${{ github.run_number }}
+          path: apps/mobile/android/app/build/outputs/apk/release/*.apk
+          retention-days: 30

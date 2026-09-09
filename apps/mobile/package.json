@@ -9,7 +9,9 @@
     "db:sync": "pnpm --filter @skaddosh/db db:push && pnpm --filter @skaddosh/db db:seed",
     "android": "expo run:android",
     "ios": "expo run:ios",
-    "doctor": "npx expo-doctor"
+    "doctor": "npx expo-doctor",
+    "verify:release": "tsc --noEmit && expo export --platform android --output-dir dist --clear",
+    "eas-build-post-install": "pnpm run verify:release"
   },
   "dependencies": {
     "@better-auth/expo": "1.6.10",
@@ -44,6 +46,7 @@
     "@skaddosh/typescript-config": "workspace:*",
     "@types/node": "22.0.0",
     "@types/react": "~19.2.10",
+    "babel-preset-expo": "~55.0.25",
     "typescript": "5.9.3"
   }
 }

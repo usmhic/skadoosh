@@ -1,0 +1,190 @@
+########################################################################
+# Skadoosh — mobile delivery lanes
+#
+#   dev branch   →  android_dev / ios_dev   →  Firebase App Distribution
+#   main branch  →  android_release         →  Google Play Console
+#                   ios_release             →  App Store Connect
+#
+# Android and iOS never share a lane, so a failure on one platform can
+# never block the other. See MOBILE_DELIVERY.md at the repo root.
+########################################################################
+
+default_platform(:ios)
+
+IOS_BUNDLE_IDENTIFIER = ENV["IOS_BUNDLE_IDENTIFIER"] || "app.skaddosh.mobile"
+
+# `expo prebuild` names the Xcode project after expo.name with non-alphanumerics
+# stripped ("skaddosh" -> "skaddosh"). Overridable in case the app
+# is ever renamed, so a rename is a variable change rather than a code change.
+IOS_SCHEME = ENV["IOS_SCHEME"] || "skaddosh"
+IOS_WORKSPACE = ENV["IOS_WORKSPACE"] || "ios/#{IOS_SCHEME}.xcworkspace"
+IOS_IPA_NAME = "#{IOS_SCHEME}.ipa"
+
+# ─── Shared helpers ───────────────────────────────────────────────────
+
+def release_notes
+  # Populated by CI with the commit subject; harmless when unset locally.
+  ENV["FIREBASE_RELEASE_NOTES"] || "Build #{ENV['GITHUB_RUN_NUMBER'] || 'local'}"
+end
+
+def tester_groups
+  # Comma-separated Firebase tester group aliases, e.g. "qa,internal".
+  ENV["FIREBASE_TESTER_GROUPS"]
+end
+
+# ─── iOS ──────────────────────────────────────────────────────────────
+
+platform :ios do
+  before_all do
+    # Temporary, non-interactive keychain for this run instead of touching the
+    # runner's default keychain — standard fastlane CI setup.
+    setup_ci if ENV["CI"]
+  end
+
+  private_lane :import_signing do |options|
+    import_certificate(
+      certificate_path: options[:certificate_path],
+      certificate_password: options[:certificate_password],
+      keychain_name: ENV["MATCH_KEYCHAIN_NAME"] || "fastlane_tmp_keychain",
+    )
+    install_provisioning_profile(path: options[:profile_path])
+  end
+
+  private_lane :build_ios do |options|
+    cocoapods(podfile: "ios/Podfile")
+    gym(
+      workspace: IOS_WORKSPACE,
+      scheme: IOS_SCHEME,
+      export_method: options[:export_method],
+      export_options: {
+        provisioningProfiles: {
+          IOS_BUNDLE_IDENTIFIER => options[:profile_name],
+        },
+      },
+      output_directory: "build",
+      output_name: IOS_IPA_NAME,
+    )
+  end
+
+  desc "Build a signed Ad Hoc IPA for internal testing (workflow artifact only, not distributed)"
+  lane :ios_adhoc do
+    import_signing(
+      certificate_path: ENV.fetch("IOS_ADHOC_CERTIFICATE_PATH"),
+      certificate_password: ENV.fetch("IOS_ADHOC_CERTIFICATE_PASSWORD"),
+      profile_path: ENV.fetch("IOS_ADHOC_PROVISIONING_PROFILE_PATH"),
+    )
+    build_ios(
+      export_method: "ad-hoc",
+      profile_name: ENV.fetch("IOS_ADHOC_PROFILE_NAME"),
+    )
+  end
+
+  desc "Build a signed Ad Hoc IPA and ship it to Firebase App Distribution (testers' App Tester app)"
+  lane :ios_dev do
+    ios_adhoc
+
+    firebase_app_distribution(
+      app: ENV.fetch("FIREBASE_IOS_APP_ID"),
+      service_credentials_file: ENV.fetch("FIREBASE_SERVICE_ACCOUNT_JSON_PATH"),
+      ipa_path: "build/#{IOS_IPA_NAME}",
+      groups: tester_groups,
+      release_notes: release_notes,
+    )
+  end
+
+  desc "Build the signed App Store IPA and upload it to App Store Connect"
+  lane :ios_release do
+    import_signing(
+      certificate_path: ENV.fetch("IOS_DISTRIBUTION_CERTIFICATE_PATH"),
+      certificate_password: ENV.fetch("IOS_DISTRIBUTION_CERTIFICATE_PASSWORD"),
+      profile_path: ENV.fetch("IOS_APPSTORE_PROVISIONING_PROFILE_PATH"),
+    )
+    build_ios(
+      export_method: "app-store",
+      profile_name: ENV.fetch("IOS_APPSTORE_PROFILE_NAME"),
+    )
+
+    api_key = app_store_connect_api_key(
+      key_id: ENV.fetch("APPSTORE_CONNECT_API_KEY_ID"),
+      issuer_id: ENV.fetch("APPSTORE_CONNECT_API_ISSUER_ID"),
+      key_filepath: ENV.fetch("APPSTORE_CONNECT_API_KEY_PATH"),
+    )
+
+    # Uploads the binary to App Store Connect. It lands in TestFlight and is
+    # promotable to an App Store release from there — deliberately not
+    # auto-submitted for review, so a human still presses the final button.
+    upload_to_testflight(
+      api_key: api_key,
+      ipa: "build/#{IOS_IPA_NAME}",
+      skip_waiting_for_build_processing: true,
+    )
+  end
+end
+
+# ─── Android ──────────────────────────────────────────────────────────
+
+platform :android do
+  private_lane :android_signing_properties do |options|
+    {
+      "android.injected.signing.store.file" => options[:keystore_path],
+      "android.injected.signing.store.password" => options[:keystore_password],
+      "android.injected.signing.key.alias" => options[:key_alias],
+      "android.injected.signing.key.password" => options[:key_password],
+    }
+  end
+
+  private_lane :signing_from_env do
+    android_signing_properties(
+      keystore_path: ENV.fetch("ANDROID_KEYSTORE_PATH"),
+      keystore_password: ENV.fetch("ANDROID_KEYSTORE_PASSWORD"),
+      key_alias: ENV.fetch("ANDROID_KEY_ALIAS"),
+      key_password: ENV.fetch("ANDROID_KEY_PASSWORD"),
+    )
+  end
+
+  desc "Build a signed release APK for manual testing (workflow artifact only, not distributed)"
+  lane :android_internal do
+    gradle(
+      project_dir: "android",
+      task: "assemble",
+      build_type: "Release",
+      properties: signing_from_env,
+    )
+  end
+
+  desc "Build a signed release APK and ship it to Firebase App Distribution (testers' App Tester app)"
+  lane :android_dev do
+    android_internal
+
+    firebase_app_distribution(
+      app: ENV.fetch("FIREBASE_ANDROID_APP_ID"),
+      service_credentials_file: ENV.fetch("FIREBASE_SERVICE_ACCOUNT_JSON_PATH"),
+      android_artifact_type: "APK",
+      android_artifact_path: lane_context[SharedValues::GRADLE_APK_OUTPUT_PATH],
+      groups: tester_groups,
+      release_notes: release_notes,
+    )
+  end
+
+  desc "Build the signed release AAB and upload it to the configured Play Console track"
+  lane :android_release do
+    gradle(
+      project_dir: "android",
+      task: "bundle",
+      build_type: "Release",
+      properties: signing_from_env,
+    )
+
+    # Defaults to the production track as a draft release: the artifact reaches
+    # the Play Console but is not rolled out until someone promotes it.
+    upload_to_play_store(
+      track: ENV["GOOGLE_PLAY_TRACK"] || "production",
+      release_status: ENV["GOOGLE_PLAY_RELEASE_STATUS"] || "draft",
+      aab: lane_context[SharedValues::GRADLE_AAB_OUTPUT_PATH],
+      json_key: ENV.fetch("GOOGLE_PLAY_JSON_KEY_PATH"),
+      skip_upload_metadata: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true,
+    )
+  end
+end
