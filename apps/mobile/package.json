@@ -28,7 +28,7 @@
     "better-auth": "1.6.10",
     "expo": "^55.0.31",
     "expo-auth-session": "^55.0.18",
-    "expo-linking": "^55.0.17",
+    "expo-linking": "^57.0.9",
     "expo-localization": "^55.0.19",
     "expo-secure-store": "^55.0.18",
     "expo-web-browser": "^55.0.20",
