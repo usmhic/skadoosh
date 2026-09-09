@@ -21,13 +21,13 @@
   },
   "dependencies": {
     "drizzle-orm": "0.45.2",
-    "postgres": "3.4.5"
+    "postgres": "3.4.9"
   },
   "devDependencies": {
     "@skaddosh/typescript-config": "workspace:*",
     "@types/node": "22.0.0",
-    "drizzle-kit": "0.31.9",
-    "tsx": "4.19.0",
+    "drizzle-kit": "0.31.10",
+    "tsx": "4.23.13",
     "typescript": "5.9.3"
   }
 }
