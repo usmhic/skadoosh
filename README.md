@@ -172,8 +172,9 @@ in the shell or `.env` to skip the hook in automation.
 
 </div>
 
-📱 **The App Store and Play Store listings aren't live yet** — the Expo app builds through EAS
-today, and store submission is next. Until then, running it takes about a minute:
+📱 **The App Store and Play Store listings aren't live yet** — CI already produces signed Android
+and iOS builds and ships them to testers, and public store submission is next. Until then, running
+it takes about a minute:
 
 ```bash
 pnpm dev:mobile
@@ -192,7 +193,10 @@ address when testing on a physical device. See [apps/mobile/](./apps/mobile).
 | Workflow | Trigger | What it does |
 |---|---|---|
 | `web-ci.yml` | push to `dev`, PR to `main`/`dev`, manual dispatch | type-check (all packages) + lint → Docker build/push to GHCR (push only) → Docker smoke test (PR only) |
-| `mobile-ci.yml` | manual dispatch, push of tag `mobile-v*` | type-check → EAS build (requires `EXPO_TOKEN` + `EAS_PROJECT_ID` secrets) |
+| `mobile-android-dev.yml` | push to `dev`, manual dispatch | type-check → signed APK → Firebase App Distribution |
+| `mobile-ios-dev.yml` | manual dispatch | signed Ad Hoc IPA → Firebase App Distribution |
+| `mobile-android-release.yml` | push to `main`, manual dispatch | signed AAB → Google Play Console |
+| `mobile-ios-release.yml` | push to `main`, manual dispatch | signed IPA → App Store Connect |
 | `release.yml` | push of tag `v*.*.*` | creates a GitHub Release with auto-generated notes |
 
 The image is published to `ghcr.io/usmhic/skadoosh`, tagged `latest` (from `main`), by branch/tag
@@ -201,10 +205,14 @@ ref are cancelled automatically.
 
 Required GitHub secrets/vars:
 
-- `DOKPLOY_WEBHOOK_URL` (optional, CI deploy notification — not currently wired into `web-ci.yml`, see `ARCHITECTURE.md`)
-- `EXPO_TOKEN` (required for mobile EAS builds)
-- `EAS_PROJECT_ID` (required for mobile EAS builds)
 - `NEXT_PUBLIC_APP_URL` as a repository variable (recommended for Docker/app metadata)
+- `DOKPLOY_WEBHOOK_URL` (optional, CI deploy notification — not currently wired into `web-ci.yml`, see `ARCHITECTURE.md`)
+- **Android signing/delivery** — `ANDROID_INTERNAL_*` and `ANDROID_RELEASE_*` keystore secrets, plus `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON`
+- **iOS signing/delivery** — `IOS_ADHOC_*`, `IOS_DISTRIBUTION_*`, `IOS_APPSTORE_PROVISIONING_PROFILE_BASE64`, `KEYCHAIN_PASSWORD`, and the `APPSTORE_CONNECT_API_*` trio
+- **Tester distribution** — `FIREBASE_SERVICE_ACCOUNT_JSON`, `FIREBASE_ANDROID_APP_ID`, `FIREBASE_IOS_APP_ID`
+
+The full mobile signing and delivery setup is documented in
+[MOBILE_DELIVERY.md](./MOBILE_DELIVERY.md).
 
 ## 📚 Documentation
 
