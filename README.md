@@ -2,12 +2,13 @@
 
 # ✍️ skaddosh
 
-### A home for human creativity.
+### Original work finds its first believers here.
 
-**A publishing and reading platform for people who still write things.**
-Writers share stories, essays, poems, and journals. Readers discover them,
-support them, and say so with Kudos. No algorithmic slop — just people,
-writing, and other people reading it.
+**A creator portfolio and community platform for original, human-made work.**
+Creators share pieces and open projects while they're still ideas. Supporters
+give **Hot Kudos**, back projects early with **Cold Kudos**, and share in what
+those projects go on to earn. No paid boosts, no slop. Just people making
+things and the people who believed in them first.
 
 <br />
 
@@ -35,7 +36,7 @@ writing, and other people reading it.
 
 | Where | Link | What you'll see |
 |---|---|---|
-| 📚 **Reader** | **[skadoosh.osas.cloud](https://skadoosh.osas.cloud)** | Discovery, reading, profiles, and Kudos |
+| 📚 **Discover** | **[skadoosh.osas.cloud](https://skadoosh.osas.cloud)** | Discovery modes, circles, projects, profiles, and Kudos |
 | 🖋 **Studio** | **[skadoosh.osas.cloud/studio](https://skadoosh.osas.cloud/studio)** | The creator surface — works, drafts, publishing controls |
 | 🎨 **Portfolio** | [skadoosh.osas.cloud](https://skadoosh.osas.cloud) | Public creator pages, projects, contact, and analytics |
 
@@ -54,8 +55,12 @@ intentional; just be aware which one a given URL needs. See
 
 | | Surface | Highlights |
 |---|---|---|
-| 📚 | **Reader** | Discovery, reading experience, profiles, and Kudos |
-| 🖋 | **Creator** | Studio, works, drafts, and publishing controls |
+| ✦ | **Discover** | Modes (For you, Following, Rising, Seeking backers, Open collabs, New voices) and craft Circles |
+| 🧭 | **Projects** | Public project pages with stages, milestones, a process log, open roles, backers, and an AI-use disclosure |
+| K | **Kudos** | Hot Kudos to give, Cold Kudos to back projects, milestone releases, capped returns, and a full wallet history |
+| 🏅 | **Reputation** | Signals you can check (backed by, delivered, supports, early believer) instead of follower counts |
+| 📚 | **Reader** | Reading experience, translations, and confidential unlocks |
+| 🖋 | **Creator** | Studio, pieces, projects, drafts, and publishing controls |
 | 🎨 | **Portfolio** | Public pages, projects, contact forms, analytics, premium features |
 | 📱 | **Mobile** | Expo app for read, discover, and studio workflows over the same tRPC API |
 | 🔎 | **AI search** | OpenAI-backed discovery across published works |
@@ -109,6 +114,7 @@ pnpm dev:web     # db:prepare + web app only
 pnpm dev:mobile  # db:prepare + mobile app only
 pnpm build       # turbo build
 pnpm lint        # type-check (tsc --noEmit) across all packages, via turbo
+pnpm test        # unit tests (Kudos economy rules), via turbo
 
 pnpm db:prepare  # ensure DB exists, sync schema, seed
 pnpm db:deploy   # migrate + seed for start/prod-like flow
@@ -218,6 +224,8 @@ The full mobile signing and delivery setup is documented in
 
 | Doc | What's in it |
 |---|---|
+| [Product direction](./docs/PRODUCT.md) | Vision, the core loop, every surface, originality and AI, roadmap |
+| [Kudos](./docs/KUDOS.md) | Hot and Cold Kudos: rules, formulas, worked examples, guardrails |
 | [Contributing](./CONTRIBUTING.md) | Local setup, branch conventions, coding standards, release process |
 | [Architecture](./ARCHITECTURE.md) | How the pieces fit together, directory purposes |
 | [Engineering standards](./STANDARDS.md) | Shared conventions across every usmhic project |

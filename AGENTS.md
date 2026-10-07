@@ -15,7 +15,8 @@ repository is named `skadoosh`; internal packages intentionally use the
 - `packages/db`: Drizzle schema, migration, and seed data.
 - `packages/i18n` and `packages/ui`: shared language and UI primitives.
 
-Read `ARCHITECTURE.md` before changing boundaries or data flow.
+Read `ARCHITECTURE.md` before changing boundaries or data flow, and `docs/PRODUCT.md` /
+`docs/KUDOS.md` before changing product surfaces or anything that moves Kudos.
 
 ## Commands
 
@@ -24,6 +25,7 @@ Use the pinned Node and pnpm versions from `mise.toml`.
 - Install: `pnpm install --frozen-lockfile`
 - Develop: `pnpm dev`
 - Check: `pnpm lint`
+- Test: `pnpm test`
 - Build: `pnpm build`
 - Database: `pnpm db:prepare`
 
@@ -37,3 +39,5 @@ Copy `.env.example` to `.env` before commands that require services.
 - Never expose server secrets through `NEXT_PUBLIC_*` or `EXPO_PUBLIC_*`.
 - Keep the `skadoosh` repository / `skaddosh` product spelling distinction.
 - Update `.env.example`, documentation, and tests with public behavior.
+- Move Kudos only through `packages/api/src/lib/kudos-ledger.ts` inside a transaction, so every
+  balance change has a ledger row. Keep `kudos-economy.ts`, its tests, and `docs/KUDOS.md` in sync.
