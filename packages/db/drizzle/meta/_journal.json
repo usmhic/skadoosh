@@ -8,6 +8,13 @@
       "when": 1784667083499,
       "tag": "0000_initial",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1791359909608,
+      "tag": "0001_kudos_economy",
+      "breakpoints": true
     }
   ]
 }

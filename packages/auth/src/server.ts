@@ -5,7 +5,7 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "@better-auth/drizzle-adapter";
 import { expo } from "@better-auth/expo";
-import { db, user, session, account, verification } from "@skaddosh/db";
+import { db, user, session, account, verification, kudosLedger } from "@skaddosh/db";
 import {
   sendPasswordResetEmail,
   sendVerificationEmail,
@@ -62,6 +62,27 @@ export const auth = betterAuth({
       role:     { type: "string", defaultValue: "reader", input: true },
       username: { type: "string", required: false,        input: true },
       bio:      { type: "string", required: false,        input: false },
+    },
+  },
+
+  databaseHooks: {
+    user: {
+      create: {
+        // Every new account starts with the signup grant (the column default). Record it in the
+        // ledger so wallet history accounts for every Hot Kudo from the first day.
+        after: async (created) => {
+          const [row] = await db.$client<{ kudosBalance: number }[]>`
+            select kudos_balance as "kudosBalance" from "user" where id = ${created.id}
+          `;
+          if (!row || row.kudosBalance <= 0) return;
+          await db.insert(kudosLedger).values({
+            userId: created.id,
+            currency: "hot",
+            delta: row.kudosBalance,
+            kind: "signup_grant",
+          });
+        },
+      },
     },
   },
 

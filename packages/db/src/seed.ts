@@ -11,6 +11,7 @@ import {
 } from "./index";
 import { eq, or } from "drizzle-orm";
 import { SEED_CREATOR, SEED_WORKS } from "./seed-data";
+import { DEMO_PROJECT_COUNT, insertDemoProjects, reconcileDemoLedger } from "./seed-projects";
 import type { UserRole, WorkType } from "./schema";
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -1409,9 +1410,11 @@ export async function runSeed() {
   await insertDemoWorks();
   await insertDemoEngagement();
   await insertDemoPortfolios();
+  await insertDemoProjects();
+  await reconcileDemoLedger([...DEMO_USERS.map((demoUser) => demoUser.id), OWNER_SEED_ID]);
 
   console.log(
-    `[skaddosh] Demo seed ready: ${DEMO_USERS.length} users, ${DEMO_WORKS.length} works, ${DEMO_PORTFOLIOS.length} portfolios, ${DEMO_ANALYTICS.length} analytics events.`,
+    `[skaddosh] Demo seed ready: ${DEMO_USERS.length} users, ${DEMO_WORKS.length} works, ${DEMO_PROJECT_COUNT} projects, ${DEMO_PORTFOLIOS.length} portfolios, ${DEMO_ANALYTICS.length} analytics events.`,
   );
 }
 
