@@ -1,6 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { eq, desc, and, ilike, or } from "drizzle-orm";
+import { eq, desc, and, ilike, or, sql } from "drizzle-orm";
 import { db, work, user, kudos, comment, userSettings } from "@skaddosh/db";
 import {
   sendCommentReceivedEmail,
@@ -9,9 +9,13 @@ import {
 import { router, publicProcedure, protectedProcedure, creatorProcedure } from "../trpc";
 import { randomUUID } from "crypto";
 import { canViewFull, hasContentAccess } from "../lib/content-access";
+import { KUDOS } from "../lib/kudos-economy";
+import { creditHot, debitHot } from "../lib/kudos-ledger";
+import { parseAiUsage } from "../lib/project-view";
+import { AI_USAGE } from "@skaddosh/db";
 
 const WORK_TYPES = ["story", "novel", "poem", "essay", "article", "journal", "script", "research"] as const;
-const KUDOS_COST_COMMENT = 3; // kudos required to leave a comment
+const KUDOS_COST_COMMENT = KUDOS.COMMENT_COST; // Hot Kudos burned to leave a comment (anti-spam)
 const LANG_ORDER = ["ar", "en", "fr", "es"] as const;
 type Lang = (typeof LANG_ORDER)[number];
 type BodyKey = "bodyAr" | "bodyEn" | "bodyFr" | "bodyEs";
@@ -37,6 +41,7 @@ function parseWork(w: typeof work.$inferSelect) {
     tag:     JSON.parse(w.tagJson)     as Record<string, string>,
     summary: JSON.parse(w.summaryJson) as Record<string, string>,
     tags:    JSON.parse(w.tagsJson)    as string[],
+    aiUsage: parseAiUsage(w.aiUsageJson),
   };
 }
 
@@ -355,6 +360,7 @@ export const worksRouter = router({
       visibility: z.enum(["public", "confidential"]).optional(),
       unlockMethod: z.enum(["request", "kudos"]).optional(),
       kudosPrice: z.number().int().min(0).max(500).optional(),
+      aiUsage: z.array(z.enum(AI_USAGE)).max(AI_USAGE.length).optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       const [existing] = await db.select().from(work)
@@ -380,6 +386,7 @@ export const worksRouter = router({
         visibility:  input.visibility   ?? existing.visibility,
         unlockMethod: input.unlockMethod ?? existing.unlockMethod,
         kudosPrice:  input.kudosPrice ?? existing.kudosPrice,
+        aiUsageJson: input.aiUsage ? JSON.stringify(input.aiUsage) : existing.aiUsageJson,
         readingTime: Math.max(1, Math.round(words / 200)),
         updatedAt:   new Date(),
       }).where(eq(work.id, input.id));
@@ -389,7 +396,7 @@ export const worksRouter = router({
   sendKudos: publicProcedure
     .input(z.object({
       workId:  z.string(),
-      amount:  z.number().min(1).max(5).default(1),
+      amount:  z.number().int().min(KUDOS.GIVE_MIN).max(KUDOS.GIVE_MAX).default(1),
       message: z.string().max(280).optional(),
     }))
     .mutation(async ({ ctx, input }) => {
@@ -398,9 +405,6 @@ export const worksRouter = router({
 
       const [sender] = await db.select().from(user).where(eq(user.id, fromUserId)).limit(1);
       if (!sender) throw new TRPCError({ code: "NOT_FOUND", message: "Sender not found." });
-      if (sender.kudosBalance < input.amount) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Not enough kudos balance." });
-      }
 
       const [target] = await db
         .select({
@@ -417,25 +421,31 @@ export const worksRouter = router({
         .where(eq(work.id, input.workId))
         .limit(1);
       if (!target) throw new TRPCError({ code: "NOT_FOUND", message: "Work not found." });
+      if (target.creator.id === fromUserId) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "You can't give Kudos to your own work." });
+      }
 
-      await db.insert(kudos).values({
-        id: randomUUID(),
-        workId: input.workId,
-        fromUserId,
-        amount: input.amount,
-        message: input.message ?? null,
-        createdAt: new Date(),
+      // Hot Kudos move from the giver to the creator, who can spend them on other creators.
+      await db.transaction(async (tx) => {
+        await debitHot(tx, fromUserId, input.amount, { kind: "give", workId: input.workId, counterpartyId: target.creator.id });
+        await tx.insert(kudos).values({
+          id: randomUUID(),
+          workId: input.workId,
+          fromUserId,
+          amount: input.amount,
+          message: input.message ?? null,
+          createdAt: new Date(),
+        });
+        await tx.update(work).set({ kudosCount: sql`${work.kudosCount} + ${input.amount}` }).where(eq(work.id, input.workId));
+        await creditHot(tx, target.creator.id, input.amount, { kind: "receive", workId: input.workId, counterpartyId: fromUserId });
       });
-      const [cur] = await db.select({ n: work.kudosCount }).from(work).where(eq(work.id, input.workId)).limit(1);
-      await db.update(work).set({ kudosCount: (cur?.n ?? 0) + input.amount }).where(eq(work.id, input.workId));
-      await db.update(user).set({ kudosBalance: sender.kudosBalance - input.amount, updatedAt: new Date() }).where(eq(user.id, fromUserId));
 
       const [settings] = await db
         .select({ emailNotifications: userSettings.emailNotifications })
         .from(userSettings)
         .where(eq(userSettings.userId, target.creator.id))
         .limit(1);
-      if (target.creator.id !== fromUserId && (settings?.emailNotifications ?? true)) {
+      if (settings?.emailNotifications ?? true) {
         await sendKudosReceivedEmail({
           to: target.creator.email,
           creatorName: target.creator.name,
@@ -501,10 +511,11 @@ export const worksRouter = router({
       if (!target) throw new TRPCError({ code: "NOT_FOUND", message: "Work not found." });
 
       const now = new Date();
-      await db.insert(comment).values({ id: randomUUID(), workId: input.workId, fromUserId: userId, body: input.body, kudosSpent: KUDOS_COST_COMMENT, createdAt: now });
-      await db.update(user).set({ kudosBalance: dbUser.kudosBalance - KUDOS_COST_COMMENT, updatedAt: new Date() }).where(eq(user.id, userId));
-      const [cur] = await db.select({ n: work.commentsCount }).from(work).where(eq(work.id, input.workId)).limit(1);
-      await db.update(work).set({ commentsCount: (cur?.n ?? 0) + 1 }).where(eq(work.id, input.workId));
+      await db.transaction(async (tx) => {
+        await debitHot(tx, userId, KUDOS_COST_COMMENT, { kind: "comment", workId: input.workId });
+        await tx.insert(comment).values({ id: randomUUID(), workId: input.workId, fromUserId: userId, body: input.body, kudosSpent: KUDOS_COST_COMMENT, createdAt: now });
+        await tx.update(work).set({ commentsCount: sql`${work.commentsCount} + 1` }).where(eq(work.id, input.workId));
+      });
 
       const [settings] = await db
         .select({ emailNotifications: userSettings.emailNotifications })

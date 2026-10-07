@@ -2,7 +2,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { eq, sql } from "drizzle-orm";
 import { sendKudosPurchaseCompletedEmail } from "@skaddosh/auth/mailer";
-import { billingSubscriptions, db, kudosPurchases, user } from "@skaddosh/db";
+import { billingSubscriptions, db, kudosLedger, kudosPurchases, user } from "@skaddosh/db";
 
 type PaddleSubscriptionEvent = {
   event_type: string;
@@ -126,6 +126,13 @@ async function grantKudosForTransaction(data: NonNullable<PaddleSubscriptionEven
         updatedAt: new Date(),
       })
       .where(eq(user.id, data.custom_data!.userId!));
+
+    await tx.insert(kudosLedger).values({
+      userId: data.custom_data!.userId!,
+      currency: "hot",
+      delta: amount,
+      kind: "purchase",
+    });
   });
 
   const [recipient] = await db

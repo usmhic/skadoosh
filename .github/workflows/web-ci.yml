@@ -44,6 +44,8 @@ jobs:
 
       - run: pnpm lint
 
+      - run: pnpm test
+
   docker:
     name: Build and push
     runs-on: ubuntu-latest

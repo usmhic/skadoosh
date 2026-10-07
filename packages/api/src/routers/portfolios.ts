@@ -509,10 +509,10 @@ export async function notifyOwnerInbox(
     .from(portfolioProfiles)
     .where(eq(portfolioProfiles.userId, ownerId))
     .limit(1);
-  if (!profile) return;
+  if (!profile) return false;
 
   const [owner] = await db.select().from(user).where(eq(user.id, ownerId)).limit(1);
-  if (!owner) return;
+  if (!owner) return false;
 
   const fallback = defaultContentFor({
     name: profile.displayName,
@@ -542,6 +542,7 @@ export async function notifyOwnerInbox(
       updatedAt: new Date(),
     })
     .where(eq(portfolioProfiles.id, profile.id));
+  return true;
 }
 
 async function getBillingSubscriptionForUserId(userId: string) {

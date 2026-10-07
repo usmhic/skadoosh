@@ -2,6 +2,10 @@
   "name": "@skaddosh/api",
   "version": "0.1.0",
   "private": true,
+  "scripts": {
+    "test": "tsx --test src/**/*.test.ts",
+    "lint": "tsc --noEmit"
+  },
   "exports": {
     ".": {
       "import": "./src/index.ts",
@@ -10,6 +14,10 @@
     "./client": {
       "import": "./src/client.ts",
       "require": "./src/client.ts"
+    },
+    "./kudos": {
+      "import": "./src/lib/kudos-economy.ts",
+      "require": "./src/lib/kudos-economy.ts"
     }
   },
   "dependencies": {
@@ -25,6 +33,7 @@
   "devDependencies": {
     "@skaddosh/typescript-config": "workspace:*",
     "@types/node": "22.0.0",
+    "tsx": "4.19.0",
     "typescript": "5.9.3"
   }
 }
