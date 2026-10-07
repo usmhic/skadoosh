@@ -593,8 +593,8 @@ export default function SettingsPage() {
                     set: setProfilePublic,
                   },
                   {
-                    label: "Show Cold Kudos",
-                    desc: "Display sent/shared work Kudos on your public profile. Purchased Hot Kudos stay private.",
+                    label: "Show Kudos received",
+                    desc: "Display the Kudos your work has received on your public profile. Your wallet balances always stay private.",
                     value: showKudos,
                     set: setShowKudos,
                   },

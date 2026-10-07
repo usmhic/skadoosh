@@ -20,6 +20,7 @@ import { cn } from "@skaddosh/ui/lib/utils";
 import { ArrowLeftIcon, ClockIcon, SparklesIcon, TagIcon, Loader2Icon } from "lucide-react";
 import { SEED_WORKS, SEED_CREATOR } from "@skaddosh/db/seed-data";
 import { BodyContent } from "@/components/body-content";
+import { HumanMadeNote, KudosMark } from "@/components/kudos/kudos-ui";
 import type { Lang } from "@skaddosh/db/schema";
 const LANG_ORDER: Lang[] = ["ar", "en", "fr", "es"];
 const LANG_LABEL: Record<Lang, string> = { ar: "Arabic", en: "English", fr: "French", es: "Spanish" };
@@ -349,6 +350,12 @@ export default function ReadPage({ params }: { params: Promise<{ workId: string 
         ) : null}
       </article>
 
+      {work && !work.locked ? (
+        <div className="mb-6">
+          <HumanMadeNote aiUsage={work.aiUsage} confirmed />
+        </div>
+      ) : null}
+
       {/* Kudos */}
       <div className={cn("rounded-2xl border border-border bg-card p-6", rtl ? "text-right" : "text-left")}>
         <p className={cn("mb-1.5 font-semibold text-foreground", rtl ? "font-arabic" : "font-display")}>
@@ -388,9 +395,10 @@ export default function ReadPage({ params }: { params: Promise<{ workId: string 
       <Dialog open={pendingKudosAmount !== null} onOpenChange={(open) => !open && setPendingKudosAmount(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Send {pendingKudosAmount ?? 0} kudos?</DialogTitle>
+            <DialogTitle>Give {pendingKudosAmount ?? 0} Kudos?</DialogTitle>
             <DialogDescription>
-              This will spend {pendingKudosAmount ?? 0} token{pendingKudosAmount === 1 ? "" : "s"} from your balance and attach your note if you wrote one.
+              {pendingKudosAmount ?? 0} Hot Kudos go from your wallet straight to{" "}
+              {(w as { creator?: { name: string } }).creator?.name ?? "the creator"}, along with your note if you wrote one.
             </DialogDescription>
           </DialogHeader>
           {reviewText.trim() ? (
@@ -409,7 +417,7 @@ export default function ReadPage({ params }: { params: Promise<{ workId: string 
               }}
               disabled={sendKudos.isPending}
             >
-              {sendKudos.isPending ? "Sending..." : "Confirm Kudos"}
+              {sendKudos.isPending ? "Giving..." : "Give Kudos"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -421,9 +429,5 @@ export default function ReadPage({ params }: { params: Promise<{ workId: string 
 }
 
 function KudosIcon() {
-  return (
-    <span className="inline-flex size-4 items-center justify-center rounded-full border border-current font-display text-[0.65rem] font-semibold italic leading-none">
-      K
-    </span>
-  );
+  return <KudosMark temp="hot" size="sm" />;
 }

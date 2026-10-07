@@ -20,6 +20,7 @@ import {
   XIcon,
 } from "lucide-react";
 import { SEED_CREATOR, SEED_WORKS } from "@skaddosh/db/seed-data";
+import { KudosMark } from "@/components/kudos/kudos-ui";
 
 const WORK_TYPES = [
   "story",
@@ -456,8 +457,9 @@ function WorkCard({
           {work.creator?.name}
         </span>
         {work.kudosCount ? (
-          <span className="ml-auto flex items-center gap-0.5">
-            {work.kudosCount} Cold
+          <span className="ml-auto flex items-center gap-1">
+            <KudosMark temp="hot" size="xs" />
+            {work.kudosCount}
           </span>
         ) : null}
       </div>
