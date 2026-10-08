@@ -7,10 +7,11 @@
       "import": "./src/index.ts",
       "require": "./src/index.ts"
     },
-    "./schema":    "./src/schema.ts",
+    "./schema": "./src/schema.ts",
     "./seed-data": "./src/seed-data.ts",
-    "./migrate":   "./src/migrate.ts",
-    "./seed":      "./src/seed.ts"
+    "./migrate": "./src/migrate.ts",
+    "./seed": "./src/seed.ts",
+    "./legal": "./src/legal.ts"
   },
   "scripts": {
     "db:generate": "node ../../scripts/with-root-env.mjs drizzle-kit generate",

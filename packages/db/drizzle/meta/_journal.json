@@ -15,6 +15,13 @@
       "when": 1791359909608,
       "tag": "0001_kudos_economy",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791466331469,
+      "tag": "0002_creative_ownership",
+      "breakpoints": true
     }
   ]
 }

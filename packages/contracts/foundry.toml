@@ -1,0 +1,24 @@
+# Foundry configuration for skaddosh contracts. See docs/CHAIN.md.
+[profile.default]
+src = "src"
+test = "test"
+script = "script"
+out = "out"
+libs = ["lib", "node_modules"]
+solc_version = "0.8.28"
+evm_version = "cancun"
+optimizer = true
+optimizer_runs = 10_000
+# Reproducible bytecode, so CREATE2 addresses are identical on every machine and in CI.
+bytecode_hash = "none"
+cbor_metadata = false
+fs_permissions = [{ access = "read-write", path = "./deployments" }]
+
+[profile.default.fuzz]
+runs = 512
+
+[profile.ci.fuzz]
+runs = 4096
+
+[fmt]
+line_length = 110

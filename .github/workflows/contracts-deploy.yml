@@ -1,0 +1,119 @@
+# Deploys KudosToken and CreativeRegistry. The deploy script is idempotent (CREATE2): when the
+# contracts already exist at their deterministic addresses it verifies them and changes nothing.
+#
+# - Pushes to `dev` that change contract sources "ensure" the Base Sepolia deployment, once the
+#   `base-sepolia` environment has its secrets. Until then the job skips with a notice.
+# - Mainnet (`base`) only runs from a manual dispatch. Protect the `base` environment with required
+#   reviewers in Settings → Environments so every mainnet deployment needs approval.
+#
+# Per-environment secrets: DEPLOYER_PRIVATE_KEY (funded, deploy-only key), CHAIN_RPC_URL,
+#   ETHERSCAN_API_KEY (optional, enables source verification).
+# Per-environment variables: KUDOS_ADMIN_ADDRESS (Safe multisig), CHAIN_OPERATOR_ADDRESS (relayer),
+#   KUDOS_VAULT_ADDRESS (optional), KUDOS_SUPPLY_CAP (optional). See docs/CHAIN.md.
+name: Deploy - Contracts
+
+on:
+  workflow_dispatch:
+    inputs:
+      network:
+        description: Target network
+        type: choice
+        options: [base-sepolia, base]
+        default: base-sepolia
+      broadcast:
+        description: Broadcast transactions (unchecked = simulate only)
+        type: boolean
+        default: false
+  push:
+    branches: [dev]
+    paths:
+      - "packages/contracts/src/**"
+      - "packages/contracts/script/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-contracts-${{ inputs.network || 'base-sepolia' }}
+  # Never cancel a deployment half-way.
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Ensure contracts on ${{ inputs.network || 'base-sepolia' }}
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.network || 'base-sepolia' }}
+    env:
+      NETWORK: ${{ inputs.network || 'base-sepolia' }}
+      BROADCAST: ${{ github.event_name == 'push' || inputs.broadcast }}
+      HAS_KEY: ${{ secrets.DEPLOYER_PRIVATE_KEY != '' && secrets.CHAIN_RPC_URL != '' }}
+      KUDOS_ADMIN_ADDRESS: ${{ vars.KUDOS_ADMIN_ADDRESS }}
+      CHAIN_OPERATOR_ADDRESS: ${{ vars.CHAIN_OPERATOR_ADDRESS }}
+      KUDOS_VAULT_ADDRESS: ${{ vars.KUDOS_VAULT_ADDRESS }}
+      KUDOS_SUPPLY_CAP: ${{ vars.KUDOS_SUPPLY_CAP }}
+    defaults:
+      run:
+        working-directory: packages/contracts
+    steps:
+      - name: Skip until the environment is configured
+        if: env.HAS_KEY != 'true'
+        working-directory: .
+        run: echo "::notice::Environment '$NETWORK' has no DEPLOYER_PRIVATE_KEY/CHAIN_RPC_URL yet. Skipping deployment."
+
+      - uses: actions/checkout@v4
+        if: env.HAS_KEY == 'true'
+        with:
+          submodules: recursive
+
+      - uses: pnpm/action-setup@v4
+        if: env.HAS_KEY == 'true'
+
+      - uses: actions/setup-node@v4
+        if: env.HAS_KEY == 'true'
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - if: env.HAS_KEY == 'true'
+        run: pnpm install --frozen-lockfile --ignore-scripts --filter @skaddosh/contracts
+
+      - uses: foundry-rs/foundry-toolchain@v1
+        if: env.HAS_KEY == 'true'
+        with:
+          version: v1.7.1
+
+      - name: Test before deploying
+        if: env.HAS_KEY == 'true'
+        run: forge test
+
+      - name: Run idempotent deploy script
+        if: env.HAS_KEY == 'true'
+        env:
+          DEPLOYER_PRIVATE_KEY: ${{ secrets.DEPLOYER_PRIVATE_KEY }}
+          CHAIN_RPC_URL: ${{ secrets.CHAIN_RPC_URL }}
+          ETHERSCAN_API_KEY: ${{ secrets.ETHERSCAN_API_KEY }}
+        run: |
+          args=(script/Deploy.s.sol --rpc-url "$CHAIN_RPC_URL" --private-key "$DEPLOYER_PRIVATE_KEY")
+          if [ "$BROADCAST" = "true" ]; then args+=(--broadcast); fi
+          if [ "$BROADCAST" = "true" ] && [ -n "$ETHERSCAN_API_KEY" ]; then
+            args+=(--verify --etherscan-api-key "$ETHERSCAN_API_KEY")
+          fi
+          forge script "${args[@]}" | tee deploy.log
+
+      - name: Summary
+        if: env.HAS_KEY == 'true'
+        run: |
+          {
+            echo "### Contracts on $NETWORK (broadcast: $BROADCAST)"
+            echo '```'
+            grep -E "deployed|already deployed|_ADDRESS=|CHAIN_ID=|NOTE" deploy.log || true
+            echo '```'
+            echo "Commit \`packages/contracts/deployments/*.json\` from the artifact and set the addresses in the app environment."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        if: env.HAS_KEY == 'true'
+        with:
+          name: deployments-${{ env.NETWORK }}
+          path: packages/contracts/deployments/*.json
+          if-no-files-found: warn

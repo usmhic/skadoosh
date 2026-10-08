@@ -8,7 +8,7 @@ import { Button } from "@skaddosh/ui/components/ui/button";
 import { cn } from "@skaddosh/ui/lib/utils";
 import { CreditCardIcon, GiftIcon, Loader2Icon } from "lucide-react";
 import { KUDOS } from "@skaddosh/api/kudos";
-import { KudosFlow } from "@/components/discovery/discover-home";
+import { KudosFlow } from "@/components/kudos/kudos-flow";
 import { KudosAmount, KudosMark, StageBadge, timeAgo } from "@/components/kudos/kudos-ui";
 
 const LEDGER_LABEL: Record<string, string> = {

@@ -1,9 +1,19 @@
-import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { and, desc, eq, gte, inArray, isNull, ne, or, sql } from "drizzle-orm";
-import { db, follow, kudos, project, projectBacking, projectUpdate, user, userSettings, work } from "@skaddosh/db";
+import {
+  MEDIUMS,
+  db,
+  follow,
+  kudos,
+  project,
+  projectBacking,
+  projectUpdate,
+  user,
+  userSettings,
+  work,
+  type Medium,
+} from "@skaddosh/db";
 import { publicProcedure, router } from "../trpc";
-import { CIRCLES, circleBySlug, matchesCircle, type Circle } from "../lib/circles";
 import { risingScore } from "../lib/kudos-economy";
 import { projectCard, type ProjectCard } from "../lib/project-view";
 import { supporterCounts } from "../lib/reputation";
@@ -24,7 +34,13 @@ function parseJson<T>(value: string, fallback: T): T {
   }
 }
 
-type CreatorRef = { id: string; name: string; username: string | null; image: string | null };
+type CreatorRef = {
+  id: string;
+  name: string;
+  username: string | null;
+  image: string | null;
+  verificationStatus: string | null;
+};
 
 function workCard(w: typeof work.$inferSelect, creator: CreatorRef) {
   return {
@@ -40,7 +56,13 @@ function workCard(w: typeof work.$inferSelect, creator: CreatorRef) {
     commentsCount: w.commentsCount,
     tags: parseJson<string[]>(w.tagsJson, []),
     confidential: w.visibility === "confidential",
-    creator: { name: creator.name, username: creator.username, image: creator.image },
+    medium: "writing",
+    creator: {
+      name: creator.name,
+      username: creator.username,
+      image: creator.image,
+      verified: creator.verificationStatus === "verified",
+    },
     createdAt: w.createdAt,
   };
 }
@@ -56,14 +78,14 @@ export type DiscoverItem = (WorkCard | ProjectCard) & {
 async function loadCandidates() {
   const [works, projects] = await Promise.all([
     db
-      .select({ w: work, creator: { id: user.id, name: user.name, username: user.username, image: user.image } })
+      .select({ w: work, creator: { id: user.id, name: user.name, username: user.username, image: user.image, verificationStatus: user.verificationStatus } })
       .from(work)
       .innerJoin(user, eq(work.creatorId, user.id))
       .where(and(eq(work.published, true), eq(work.discoverable, true), isNull(work.archivedAt)))
       .orderBy(desc(work.createdAt))
       .limit(CANDIDATES),
     db
-      .select({ p: project, creator: { id: user.id, name: user.name, username: user.username, image: user.image } })
+      .select({ p: project, creator: { id: user.id, name: user.name, username: user.username, image: user.image, verificationStatus: user.verificationStatus } })
       .from(project)
       .innerJoin(user, eq(project.creatorId, user.id))
       .where(and(eq(project.status, "published"), ne(project.stage, "cancelled")))
@@ -104,10 +126,6 @@ async function momentum(workIds: string[], projectIds: string[]) {
   return map;
 }
 
-function itemTags(item: WorkCard | ProjectCard) {
-  return { tags: item.tags, workType: item.kind === "work" ? item.type : null };
-}
-
 function ageDays(date: Date) {
   return Math.max(0, (Date.now() - new Date(date).getTime()) / DAY);
 }
@@ -122,7 +140,7 @@ async function viewerInterests(viewerId: string | undefined) {
   return parseJson<string[]>(settings?.contentCategories ?? "[]", []).map((t) => t.toLowerCase());
 }
 
-async function rankedFeed(mode: Exclude<DiscoverMode, "following">, circle: Circle | undefined, viewerId?: string) {
+async function rankedFeed(mode: Exclude<DiscoverMode, "following">, medium: Medium | undefined, viewerId?: string) {
   const { works, projects } = await loadCandidates();
   const creatorIds = [...new Set([...works.map((r) => r.creator.id), ...projects.map((r) => r.creator.id)])];
   const [moment, supporters, interests] = await Promise.all([
@@ -143,7 +161,7 @@ async function rankedFeed(mode: Exclude<DiscoverMode, "following">, circle: Circ
     }),
   ];
 
-  if (circle) items = items.filter((item) => matchesCircle(circle, itemTags(item)));
+  if (medium) items = items.filter((item) => item.medium === medium);
   const creatorSupporters = (item: DiscoverItem) => supporters.get(creatorOf.get(item.id) ?? "") ?? 0;
 
   switch (mode) {
@@ -203,7 +221,7 @@ async function followingFeed(viewerId: string): Promise<DiscoverItem[]> {
   const [works, updates] = await Promise.all([
     creatorIds.length
       ? db
-          .select({ w: work, creator: { id: user.id, name: user.name, username: user.username, image: user.image } })
+          .select({ w: work, creator: { id: user.id, name: user.name, username: user.username, image: user.image, verificationStatus: user.verificationStatus } })
           .from(work)
           .innerJoin(user, eq(work.creatorId, user.id))
           .where(and(eq(work.published, true), inArray(work.creatorId, creatorIds)))
@@ -214,7 +232,7 @@ async function followingFeed(viewerId: string): Promise<DiscoverItem[]> {
       .select({
         u: projectUpdate,
         p: project,
-        creator: { id: user.id, name: user.name, username: user.username, image: user.image },
+        creator: { id: user.id, name: user.name, username: user.username, image: user.image, verificationStatus: user.verificationStatus },
       })
       .from(projectUpdate)
       .innerJoin(project, eq(project.id, projectUpdate.projectId))
@@ -252,46 +270,34 @@ export const discoverRouter = router({
       z
         .object({
           mode: z.enum(DISCOVER_MODES).default("for-you"),
-          circle: z.string().optional(),
+          medium: z.enum(MEDIUMS).optional(),
           limit: z.number().int().min(1).max(60).default(36),
         })
         .optional(),
     )
     .query(async ({ ctx, input }) => {
       const mode = input?.mode ?? "for-you";
-      const circle = input?.circle ? circleBySlug(input.circle) : undefined;
-      if (input?.circle && !circle) throw new TRPCError({ code: "NOT_FOUND", message: "Circle not found." });
       const viewerId = ctx.session?.user?.id;
 
       if (mode === "following") {
         if (!viewerId) return { mode, items: [] as DiscoverItem[] };
-        const items = await followingFeed(viewerId);
-        return { mode, items: (circle ? items.filter((i) => matchesCircle(circle, itemTags(i))) : items).slice(0, input?.limit ?? 36) };
+        let items = await followingFeed(viewerId);
+        if (input?.medium) items = items.filter((i) => i.medium === input.medium);
+        return { mode, items: items.slice(0, input?.limit ?? 36) };
       }
 
-      const items = await rankedFeed(mode, circle, viewerId);
+      const items = await rankedFeed(mode, input?.medium, viewerId);
       return { mode, items: items.slice(0, input?.limit ?? 36) };
     }),
 
-  circles: publicProcedure.query(async () => {
-    const { works, projects } = await loadCandidates();
-    const all = [
-      ...works.map((r) => ({ tags: parseJson<string[]>(r.w.tagsJson, []), workType: r.w.type as string | null, creatorId: r.creator.id })),
-      ...projects.map((r) => ({ tags: parseJson<string[]>(r.p.tags, []), workType: null, creatorId: r.creator.id })),
-    ];
-    return CIRCLES.map((circle) => {
-      const matches = all.filter((item) => matchesCircle(circle, item));
-      return {
-        ...circle,
-        items: matches.length,
-        creators: new Set(matches.map((m) => m.creatorId)).size,
-      };
-    });
-  }),
-
-  circle: publicProcedure.input(z.object({ slug: z.string() })).query(({ input }) => {
-    const circle = circleBySlug(input.slug);
-    if (!circle) return null;
-    return circle;
-  }),
+  mediums: publicProcedure.query(() => mediumCounts()),
 });
+
+/** Medium counts for the gallery filter. */
+export async function mediumCounts() {
+  const { works, projects } = await loadCandidates();
+  const counts = new Map<string, number>();
+  counts.set("writing", works.length);
+  for (const r of projects) counts.set(r.p.medium, (counts.get(r.p.medium) ?? 0) + 1);
+  return MEDIUMS.map((medium) => ({ medium, count: counts.get(medium) ?? 0 }));
+}

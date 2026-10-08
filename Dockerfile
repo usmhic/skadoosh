@@ -13,6 +13,7 @@ COPY apps/web/package.json                     apps/web/package.json
 COPY apps/mobile/package.json                  apps/mobile/package.json
 COPY packages/api/package.json                 packages/api/package.json
 COPY packages/auth/package.json                packages/auth/package.json
+COPY packages/contracts/package.json           packages/contracts/package.json
 COPY packages/db/package.json                  packages/db/package.json
 COPY packages/i18n/package.json                packages/i18n/package.json
 COPY packages/typescript-config/package.json   packages/typescript-config/package.json

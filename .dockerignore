@@ -19,3 +19,8 @@ coverage
 .DS_Store
 README.md
 memories
+# Contracts: the app only needs the generated ABIs (packages/contracts/abi).
+packages/contracts/lib
+packages/contracts/out
+packages/contracts/cache
+packages/contracts/broadcast

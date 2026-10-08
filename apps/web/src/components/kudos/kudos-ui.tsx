@@ -239,3 +239,23 @@ export function timeAgo(date: Date | string) {
   if (days < 365) return `${Math.floor(days / 30)}mo ago`;
   return `${Math.floor(days / 365)}y ago`;
 }
+
+/** A real person verified this account's identity. Never shows any identity details. */
+export function VerifiedBadge({ verified, className, label = false }: { verified?: boolean; className?: string; label?: boolean }) {
+  if (!verified) return null;
+  return (
+    <span
+      title="Verified person"
+      className={cn("inline-flex shrink-0 items-center gap-1 text-verified", className)}
+    >
+      <svg viewBox="0 0 16 16" aria-hidden="true" className="size-3.5">
+        <path
+          fill="currentColor"
+          d="M8 .9l1.8 1.3 2.2-.1.7 2.1 1.8 1.3-.7 2.1.7 2.1-1.8 1.3-.7 2.1-2.2-.1L8 15.1l-1.8-1.3-2.2.1-.7-2.1L1.5 10.5l.7-2.1-.7-2.1 1.8-1.3.7-2.1 2.2.1L8 .9z"
+        />
+        <path fill="none" stroke="var(--card)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" d="M5.2 8.2l1.9 1.8 3.7-3.9" />
+      </svg>
+      {label ? <span className="text-xs font-medium">Verified</span> : <span className="sr-only">Verified person</span>}
+    </span>
+  );
+}

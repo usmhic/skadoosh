@@ -8,6 +8,7 @@ import {
   kudosLedger,
   project,
   projectBacking,
+  projectContributor,
   projectMilestone,
   user,
   type DB,
@@ -15,7 +16,14 @@ import {
   type KudosLedgerKind,
   type Project,
 } from "@skaddosh/db";
-import { computeReleases, deliveredPercent, lockedAmount, splitIncomingKudos, weightAfterRefund } from "./kudos-economy";
+import {
+  computeReleases,
+  deliveredPercent,
+  lockedAmount,
+  splitCreatorShare,
+  splitIncomingKudos,
+  weightAfterRefund,
+} from "./kudos-economy";
 
 export type Tx = Parameters<Parameters<DB["transaction"]>[0]>[0];
 
@@ -76,15 +84,49 @@ export async function lockProject(tx: Tx, projectId: string): Promise<Project> {
 }
 
 /**
- * Route Kudos a project receives: the backer share goes to backers (as returns, capped),
- * the rest to the creator. `creatorKind` describes why the creator is credited.
+ * Pay the creator side of project income: accepted contributors get their agreed splits
+ * (docs/KUDOS.md § Contributor splits), the creator keeps the rest.
+ */
+export async function payCreatorSide(
+  tx: Tx,
+  row: Project,
+  amount: number,
+  fromUserId: string,
+  creatorKind: "receive" | "unlock_earn" | "license_earn",
+) {
+  const contributors = await tx
+    .select({ id: projectContributor.id, userId: projectContributor.userId, splitBps: projectContributor.splitBps })
+    .from(projectContributor)
+    .where(and(eq(projectContributor.projectId, row.id), eq(projectContributor.status, "accepted"), gte(projectContributor.splitBps, 1)))
+    .orderBy(projectContributor.acceptedAt);
+  const split = splitCreatorShare(amount, contributors);
+  for (const portion of split.portions) {
+    const c = contributors.find((item) => item.id === portion.id)!;
+    await creditHot(tx, c.userId, portion.amount, {
+      kind: "contributor_share",
+      projectId: row.id,
+      counterpartyId: fromUserId,
+    });
+  }
+  await creditHot(tx, row.creatorId, split.creatorAmount, {
+    kind: creatorKind,
+    projectId: row.id,
+    counterpartyId: fromUserId,
+  });
+  return split;
+}
+
+/**
+ * Route Kudos a project earns: the backer share goes to backers (as returns, capped), then the
+ * creator side is split with accepted contributors. `creatorKind` describes why it was earned.
  */
 export async function distributeProjectIncome(
   tx: Tx,
   row: Project,
   incoming: number,
   fromUserId: string,
-  creatorKind: "receive" | "unlock_earn",
+  creatorKind: "receive" | "unlock_earn" | "license_earn",
+  options: { countAsReceived?: boolean } = {},
 ) {
   const backings = await tx.select().from(projectBacking).where(eq(projectBacking.projectId, row.id));
   const split = splitIncomingKudos(incoming, backings, row.backerSharePercent, row.returnCapPercent);
@@ -102,16 +144,14 @@ export async function distributeProjectIncome(
     });
   }
 
-  await creditHot(tx, row.creatorId, split.creatorAmount, {
-    kind: creatorKind,
-    projectId: row.id,
-    counterpartyId: fromUserId,
-  });
+  await payCreatorSide(tx, row, split.creatorAmount, fromUserId, creatorKind);
 
-  await tx
-    .update(project)
-    .set({ kudosReceived: sql`${project.kudosReceived} + ${incoming}` })
-    .where(eq(project.id, row.id));
+  if (options.countAsReceived ?? true) {
+    await tx
+      .update(project)
+      .set({ kudosReceived: sql`${project.kudosReceived} + ${incoming}` })
+      .where(eq(project.id, row.id));
+  }
 
   return split;
 }

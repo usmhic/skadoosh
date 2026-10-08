@@ -9,7 +9,7 @@ export function BodyContent({ text, lang, accent }: { text: string; lang: Lang; 
     <div
       className={cn(
         "space-y-5",
-        rtl ? "font-arabic text-[1.15rem] leading-[2.1] text-right" : "font-display text-[1.05rem] leading-[1.9]",
+        rtl ? "font-arabic text-[1.15rem] leading-[2.1] text-right" : "font-serif text-[1.125rem] leading-[1.85]",
       )}
       dir={rtl ? "rtl" : "ltr"}
     >

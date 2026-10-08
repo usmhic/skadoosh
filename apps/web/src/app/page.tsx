@@ -1,6 +1,6 @@
 import { Header } from "@/components/header";
 import { Suspense } from "react";
-import { DiscoverHome } from "@/components/discovery/discover-home";
+import { Explore } from "@/components/gallery/explore";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { and, eq, sql } from "drizzle-orm";
@@ -47,7 +47,7 @@ export default async function RootPage() {
       <Header />
       <main className="flex-1">
         <Suspense>
-          <DiscoverHome />
+          <Explore />
         </Suspense>
       </main>
     </div>
