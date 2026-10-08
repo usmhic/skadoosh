@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Creator-platform direction and Kudos economy: product spec (`docs/PRODUCT.md`) and Kudos spec
+  (`docs/KUDOS.md`).
+- Hot/Cold Kudos: giving to pieces and projects (Kudos now reach the creator), backing projects
+  in Idea or Making with stage weights, milestone-based releases, capped returns to backers,
+  48-hour change of heart, cancel-and-thaw, and a weekly allowance.
+- Append-only `kudos_ledger` with a wallet page (`/kudos`) showing balances, backings, and history.
+  Purchases, unlocks, comments, and signups are recorded too.
+- Public project pages (`/projects/:id`) with stage track, milestones, process log, open roles
+  ("raise your hand" to the creator's inbox), backers wall with backer numbers, and a
+  "Made by humans" AI-use disclosure.
+- Discover modes (For you, Following, Rising, Seeking backers, Open collabs, New voices), craft
+  Circles (`/circles`), follows, and reputation signals on profiles, plus a "Believes in" tab.
+- Studio: pitch, backing terms, milestone planning and delivery, stage changes, process updates,
+  open roles, and originality confirmation (required to publish a project). AI-use disclosure for
+  pieces.
+- Migration `0001_kudos_economy`, demo projects in the seed, unit tests for the economy rules
+  (`pnpm test`, also run in CI), and a mobile tab bar for the web app.
+
 - Shared engineering standards, coding-agent guidance, Dependabot configuration,
   and a private security-reporting path.
 - Initial public documentation pass: `LICENSE`, `CODE_OF_CONDUCT.md`, issue/PR
@@ -28,6 +46,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `mobile-ci.yml` for naming consistency with the other project workflows.
 
 ### Changed
+
+- Redesigned the web experience around Kudos: new home, header wallet chip (Hot · Cold),
+  navigation (Discover, Circles, Kudos, Studio), shared cards, and Hot/Cold design tokens.
+- "Cold Kudos" now means Kudos committed to projects. Kudos a piece has received are labelled
+  "Kudos received".
+- Usernames that collide with top-level routes are reserved.
 
 - Replaced the private Metro exclusion-list import with the supported block-list configuration and set `NODE_ENV=production` for EAS release builds.
 - Aligned the mobile workspace with Expo SDK 55, added the required `react-dom` peer dependency, and removed the conflicting static Expo config so native builds use one validated configuration.

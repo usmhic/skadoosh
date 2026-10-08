@@ -1,7 +1,10 @@
+import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { eq, desc, and, or, ilike, isNotNull } from "drizzle-orm";
-import { db, portfolioProfiles, user, userSettings, work } from "@skaddosh/db";
-import { router, publicProcedure } from "../trpc";
+import { eq, desc, and, or, ilike, isNotNull, ne, sql, gt } from "drizzle-orm";
+import { db, follow, portfolioProfiles, project, projectBacking, user, userSettings, work } from "@skaddosh/db";
+import { router, publicProcedure, protectedProcedure } from "../trpc";
+import { reputationFor } from "../lib/reputation";
+import { projectCard } from "../lib/project-view";
 import {
   defaultContentFor,
   getPortfolioGallery,
@@ -70,7 +73,52 @@ export const creatorsRouter = router({
         .where(eq(portfolioProfiles.userId, creator.id)).limit(1);
       const portfolioEnabled = settings?.portfolioEnabled ?? true;
       const viewerId = ctx.session?.user?.id;
+      const creatorRef = { name: creator.name, username: creator.username, image: creator.image };
+      const [reputation, projects, believesIn, [followers], viewerFollow] = await Promise.all([
+        reputationFor(creator.id),
+        db
+          .select()
+          .from(project)
+          .where(and(eq(project.creatorId, creator.id), eq(project.status, "published"), ne(project.stage, "cancelled")))
+          .orderBy(desc(project.updatedAt)),
+        db
+          .select({
+            p: project,
+            owner: { name: user.name, username: user.username, image: user.image },
+            backerNumber: projectBacking.backerNumber,
+            stageAtBacking: projectBacking.stageAtBacking,
+          })
+          .from(projectBacking)
+          .innerJoin(project, eq(project.id, projectBacking.projectId))
+          .innerJoin(user, eq(user.id, project.creatorId))
+          .where(
+            and(
+              eq(projectBacking.backerId, creator.id),
+              gt(projectBacking.amount, projectBacking.refunded),
+              eq(project.status, "published"),
+            ),
+          )
+          .orderBy(desc(projectBacking.createdAt))
+          .limit(24),
+        db.select({ n: sql<number>`count(*)::int` }).from(follow).where(eq(follow.creatorId, creator.id)),
+        viewerId
+          ? db
+              .select({ creatorId: follow.creatorId })
+              .from(follow)
+              .where(and(eq(follow.followerId, viewerId), eq(follow.creatorId, creator.id)))
+              .limit(1)
+          : Promise.resolve([]),
+      ]);
       return {
+        reputation,
+        followers: followers?.n ?? 0,
+        viewer: { following: viewerFollow.length > 0, isSelf: viewerId === creator.id },
+        projects: projects.map((p) => projectCard(p, creatorRef)),
+        believesIn: believesIn.map((row) => ({
+          ...projectCard(row.p, row.owner),
+          backerNumber: row.backerNumber,
+          earlyBeliever: row.stageAtBacking === "idea",
+        })),
         creator: {
           id: creator.id,
           name: creator.name,
@@ -86,6 +134,19 @@ export const creatorsRouter = router({
         },
         portfolio: portfolioEnabled ? await portfolioSummary(portfolio, creator, viewerId) : null,
       };
+    }),
+
+  follow: protectedProcedure
+    .input(z.object({ creatorId: z.string(), following: z.boolean() }))
+    .mutation(async ({ ctx, input }) => {
+      const followerId = ctx.session.user.id;
+      if (followerId === input.creatorId) throw new TRPCError({ code: "BAD_REQUEST", message: "You can't follow yourself." });
+      if (input.following) {
+        await db.insert(follow).values({ followerId, creatorId: input.creatorId }).onConflictDoNothing();
+      } else {
+        await db.delete(follow).where(and(eq(follow.followerId, followerId), eq(follow.creatorId, input.creatorId)));
+      }
+      return { ok: true, following: input.following };
     }),
 
   search: publicProcedure

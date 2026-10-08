@@ -484,7 +484,7 @@ export function PortfolioView({
                       </div>
                       <h3 className="mt-4 line-clamp-2 text-lg font-semibold transition-colors group-hover:text-primary">{title}</h3>
                       <p className="mt-2 line-clamp-2 text-sm leading-6 text-muted-foreground">{tag}</p>
-                      <p className="mt-5 text-xs text-muted-foreground">{work.kudosCount ?? 0} Cold Kudos</p>
+                      <p className="mt-5 text-xs text-muted-foreground">{work.kudosCount ?? 0} Kudos received</p>
                     </Link>
                   );
                 })}

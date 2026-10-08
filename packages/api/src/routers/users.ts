@@ -4,6 +4,12 @@ import { eq } from "drizzle-orm";
 import { db, user, userSettings } from "@skaddosh/db";
 import { router, protectedProcedure } from "../trpc";
 
+/** Usernames that would collide with top-level routes (profiles live at /:username). */
+const RESERVED_USERNAMES = new Set([
+  "api", "auth", "circles", "creator", "inbox", "kudos", "portfolio", "profile",
+  "projects", "read", "settings", "studio",
+]);
+
 export const usersRouter = router({
 
   me: protectedProcedure.query(async ({ ctx }) => {
@@ -24,6 +30,9 @@ export const usersRouter = router({
     }))
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id;
+      if (input.username && RESERVED_USERNAMES.has(input.username)) {
+        throw new TRPCError({ code: "CONFLICT", message: "That username is reserved." });
+      }
       if (input.username) {
         const [taken] = await db.select({ id: user.id }).from(user)
           .where(eq(user.username, input.username)).limit(1);

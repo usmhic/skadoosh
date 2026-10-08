@@ -26,22 +26,21 @@ import { cn } from "@skaddosh/ui/lib/utils";
 import {
   BookOpenIcon,
   BriefcaseBusinessIcon,
-  CreditCardIcon,
   FileTextIcon,
   GlobeIcon,
   InboxIcon,
   LogOutIcon,
-  MinusIcon,
   MoonIcon,
   PenLineIcon,
-  PlusIcon,
   SearchIcon,
   SettingsIcon,
   SunIcon,
   UserIcon,
+  WalletIcon,
 } from "lucide-react";
 import { SEED_WORKS } from "@skaddosh/db/seed-data";
 import { useState, useRef, useCallback, useMemo, useEffect } from "react";
+import { KudosMark } from "@/components/kudos/kudos-ui";
 
 export function Header() {
   const { t } = useTranslation();
@@ -53,9 +52,6 @@ export function Header() {
   const { data: me } = trpc.users.me.useQuery(undefined, {
     enabled: !!session,
   });
-  const hotKudos =
-    (me?.user as { kudosBalance?: number; username?: string } | undefined)
-      ?.kudosBalance ?? 0;
   const username = (me?.user as { username?: string } | undefined)?.username;
 
   const [searchOpen, setSearchOpen] = useState(false);
@@ -64,9 +60,6 @@ export function Header() {
   useEffect(() => {
     setIsMac(/mac|iphone|ipad|ipod/i.test(navigator.userAgent));
   }, []);
-  const [purchaseAmount, setPurchaseAmount] = useState(25);
-  const [checkoutPending, setCheckoutPending] = useState(false);
-  const [checkoutError, setCheckoutError] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const searchQuery = searchVal.trim();
   const suggestionsQuery = trpc.works.list.useQuery(
@@ -142,30 +135,6 @@ export function Header() {
     [router],
   );
 
-  const startKudosCheckout = useCallback(async () => {
-    setCheckoutPending(true);
-    setCheckoutError("");
-    try {
-      const response = await fetch("/api/billing/kudos/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: purchaseAmount }),
-      });
-      const payload = (await response.json()) as {
-        url?: string;
-        error?: string;
-      };
-      if (!response.ok || !payload.url)
-        throw new Error(payload.error ?? "Unable to open checkout.");
-      window.location.assign(payload.url);
-    } catch (error) {
-      setCheckoutError(
-        error instanceof Error ? error.message : "Unable to open checkout.",
-      );
-      setCheckoutPending(false);
-    }
-  }, [purchaseAmount]);
-
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/60 bg-background/95 backdrop-blur-xl supports-[backdrop-filter]:bg-background/75">
       <div className="relative grid h-16 w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 px-3 sm:px-6">
@@ -174,14 +143,7 @@ export function Header() {
           {session ? (
             <>
               <span className="hidden h-6 w-px bg-border/60 sm:inline" />
-              <HotKudosDropdown
-                hotKudos={hotKudos}
-                purchaseAmount={purchaseAmount}
-                setPurchaseAmount={setPurchaseAmount}
-                checkoutError={checkoutError}
-                checkoutPending={checkoutPending}
-                onPurchase={startKudosCheckout}
-              />
+              <WalletChip />
             </>
           ) : null}
         </div>
@@ -328,26 +290,21 @@ export function Header() {
               aria-label="Primary navigation"
             >
               <HeaderNavLink
-                href="/read"
-                active={pathname === "/" || pathname.startsWith("/read")}
+                href="/"
+                active={pathname === "/" || pathname.startsWith("/read") || pathname.startsWith("/projects")}
               >
                 Discover
               </HeaderNavLink>
+              <HeaderNavLink href="/circles" active={pathname.startsWith("/circles")}>
+                Circles
+              </HeaderNavLink>
+              <HeaderNavLink href="/kudos" active={pathname.startsWith("/kudos")}>
+                Kudos
+              </HeaderNavLink>
               {session ? (
-                <>
-                  <HeaderNavLink
-                    href="/studio"
-                    active={pathname.startsWith("/studio")}
-                  >
-                    Studio
-                  </HeaderNavLink>
-                  <HeaderNavLink
-                    href="/portfolio/edit"
-                    active={pathname.startsWith("/portfolio")}
-                  >
-                    Portfolio
-                  </HeaderNavLink>
-                </>
+                <HeaderNavLink href="/studio" active={pathname.startsWith("/studio")}>
+                  Studio
+                </HeaderNavLink>
               ) : null}
             </nav>
 
@@ -490,6 +447,11 @@ function UserMenu({
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
+          <Link href="/kudos">
+            <WalletIcon /> Kudos wallet
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
           <Link href="/studio">
             <BriefcaseBusinessIcon /> Studio
           </Link>
@@ -582,113 +544,24 @@ function ThemeToggle() {
   );
 }
 
-function HotKudosDropdown({
-  hotKudos,
-  purchaseAmount,
-  setPurchaseAmount,
-  checkoutError,
-  checkoutPending,
-  onPurchase,
-}: {
-  hotKudos: number;
-  purchaseAmount: number;
-  setPurchaseAmount: React.Dispatch<React.SetStateAction<number>>;
-  checkoutError: string;
-  checkoutPending: boolean;
-  onPurchase: () => void;
-}) {
+/** Hot · Cold at a glance. Kudos are the center of the product, so they're always visible. */
+function WalletChip() {
+  const { data: wallet } = trpc.kudos.wallet.useQuery(undefined, { staleTime: 30_000 });
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm" className="h-8 gap-1.5 px-2.5">
-          <KudosIcon />
-          <span className="font-mono text-xs tabular-nums">{hotKudos}</span>
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-72">
-        <DropdownMenuLabel className="font-normal">
-          <div>
-            <p className="text-sm font-semibold">Hot Kudos</p>
-            <p className="mt-1 text-xs leading-5 text-muted-foreground">
-              Purchased Kudos available to spend. Cold Kudos are the ones sent
-              to work.
-            </p>
-            <div className="mt-3 flex items-center justify-between rounded-lg border border-border bg-muted/40 p-3">
-              <span className="text-xs text-muted-foreground">Balance</span>
-              <span className="inline-flex items-center gap-1.5 font-mono text-sm font-semibold">
-                <KudosIcon />
-                {hotKudos}
-              </span>
-            </div>
-          </div>
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <div className="space-y-3 p-2">
-          <div className="flex gap-1.5">
-            {[25, 100, 250].map((amount) => (
-              <button
-                key={amount}
-                type="button"
-                onClick={() => setPurchaseAmount(amount)}
-                className={cn(
-                  "h-8 flex-1 rounded-md border text-xs font-semibold transition",
-                  purchaseAmount === amount
-                    ? "border-primary bg-primary text-primary-foreground"
-                    : "border-border text-muted-foreground hover:text-foreground",
-                )}
-              >
-                {amount}
-              </button>
-            ))}
-          </div>
-          <div className="flex items-center justify-between rounded-md border border-border p-1">
-            <Button
-              type="button"
-              size="icon"
-              variant="ghost"
-              className="size-8"
-              onClick={() => setPurchaseAmount((a) => Math.max(25, a - 25))}
-            >
-              <MinusIcon className="size-3.5" />
-            </Button>
-            <span className="inline-flex items-center gap-2 font-mono text-sm font-semibold">
-              <KudosIcon />
-              {purchaseAmount}
-            </span>
-            <Button
-              type="button"
-              size="icon"
-              variant="ghost"
-              className="size-8"
-              onClick={() => setPurchaseAmount((a) => Math.min(250, a + 25))}
-            >
-              <PlusIcon className="size-3.5" />
-            </Button>
-          </div>
-          {checkoutError ? (
-            <p className="text-xs leading-5 text-destructive">
-              {checkoutError}
-            </p>
-          ) : null}
-          <Button
-            className="w-full"
-            size="sm"
-            onClick={onPurchase}
-            disabled={checkoutPending}
-          >
-            <CreditCardIcon className="size-4" />
-            {checkoutPending ? "Opening..." : "Purchase"}
-          </Button>
-        </div>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
-
-function KudosIcon() {
-  return (
-    <span className="inline-flex size-4 items-center justify-center rounded-full border border-current font-display text-[0.65rem] font-semibold italic leading-none">
-      K
-    </span>
+    <Link
+      href="/kudos"
+      aria-label={`Kudos wallet: ${wallet?.hot ?? 0} Hot, ${wallet?.cold ?? 0} Cold`}
+      className="inline-flex h-8 items-center gap-2 rounded-full border border-border bg-card px-2.5 text-xs font-semibold tabular-nums transition-colors hover:border-foreground/25"
+    >
+      <span className="inline-flex items-center gap-1">
+        <KudosMark temp="hot" size="xs" />
+        {wallet?.hot ?? "–"}
+      </span>
+      <span className="h-3.5 w-px bg-border" />
+      <span className="inline-flex items-center gap-1">
+        <KudosMark temp="cold" size="xs" />
+        {wallet?.cold ?? "–"}
+      </span>
+    </Link>
   );
 }

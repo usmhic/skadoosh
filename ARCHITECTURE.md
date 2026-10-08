@@ -40,7 +40,9 @@ into the Docker image and has its own release path (EAS builds via `mobile-ci.ym
 | `apps/web/src/lib/` | Client-side helpers — tRPC provider, auth client, storage, i18n context |
 | `apps/mobile/src/screens/` | Expo app screens |
 | `apps/mobile/src/lib/` | tRPC client, auth, i18n for the mobile app |
-| `packages/api/src/routers/` | tRPC router definitions, one file per domain area (works, projects, users, etc.) — the actual "backend" logic |
+| `packages/api/src/routers/` | tRPC router definitions, one file per domain area (works, projects, kudos, discover, creators, users, etc.) — the actual "backend" logic |
+| `packages/api/src/lib/kudos-economy.ts` | Pure Kudos rules (stage weights, releases, returns, caps, allowance). No I/O, unit-tested, also exported to clients as `@skaddosh/api/kudos` |
+| `packages/api/src/lib/kudos-ledger.ts` | Transactional helpers that move Kudos and write `kudos_ledger` rows. Every balance change goes through here |
 | `packages/auth/src/` | Better Auth server/client configuration, shared by web and mobile |
 | `packages/db/src/schema.ts` | Drizzle schema — the source of truth for the database shape |
 | `packages/db/drizzle/` | Generated SQL migrations |
@@ -73,11 +75,13 @@ full sequence before the app serves traffic:
    implementation instead of two copies that could drift.
 2. An advisory lock (`pg_try_advisory_lock`) is acquired so concurrent boots (e.g. multiple
    container replicas) don't race to migrate at once.
-3. Drizzle's real `migrate()` applies `packages/db/drizzle/0000_initial.sql` — the single generated
-   migration that represents the current schema — and records it in
-   `drizzle.__drizzle_migrations` so it is never re-run once applied. The SQL, snapshot, and journal
-   are generated together from `packages/db/src/schema.ts`; the journal tag must match the SQL
-   filename.
+3. Drizzle's real `migrate()` applies the generated migrations in `packages/db/drizzle/`
+   (`0000_initial.sql`, the baseline, then `0001_kudos_economy.sql`, which adds projects' stages,
+   backings, milestones, the process log, follows, and the Kudos ledger, and backfills an
+   opening-balance ledger row for every existing user) and records each in
+   `drizzle.__drizzle_migrations` so it is never re-run once applied. The SQL, snapshots, and
+   journal are generated together from `packages/db/src/schema.ts` with `pnpm db:generate`; each
+   journal tag must match its SQL filename.
 
 The initial migration targets a clean database. A database already managed by the current baseline
 keeps its existing Drizzle journal and is not migrated again. For any older or manually created
@@ -104,6 +108,15 @@ migrations" means.
   deployment beyond that (e.g. notifying a host like Dokploy) is not yet wired into the workflow —
   the `DOKPLOY_WEBHOOK_URL` secret referenced in the README is aspirational until that step is
   added. Mobile ships independently via EAS, triggered by `mobile-v*` tags.
+- **Kudos are a ledger, not just a number**: `user.kudos_balance` is the Hot balance and
+  `project_backing` holds Cold positions, but every movement also writes an append-only
+  `kudos_ledger` row inside the same transaction. Debits are conditional updates
+  (`balance >= amount`), and project-level operations lock the project row (`SELECT … FOR UPDATE`)
+  so concurrent backings, releases, and returns serialize. The economy rules are pure functions so
+  they can be tested without a database. Product rules live in [`docs/KUDOS.md`](./docs/KUDOS.md).
+- **Discovery ranks in-process**: `discover.feed` loads recent candidates and ranks them in
+  TypeScript (distinct-supporter momentum, damped by creator size). That's simple and fast enough
+  at current scale. Move ranking into SQL or a materialized view once candidate sets grow.
 - **Environment loading via `scripts/with-root-env.mjs`**: rather than each package managing its
   own `.env`, a single root `.env` (see `.env.example`) is loaded once and passed through to every
   Turbo task, keeping local setup to one file.

@@ -8,10 +8,15 @@
  *  account                    better-auth OAuth
  *  verification               better-auth email
  *  work                       a piece of writing published on skaddosh
- *  kudos                      appreciation token: reader → work
+ *  kudos                      appreciation event: supporter → work or project (Hot Kudos given)
+ *  kudosLedger                append-only record of every Hot/Cold Kudos balance movement
  *  comment                    comments that spend kudos
  *  userSettings               per-user preferences
- *  project                    showcase project (portfolio item)
+ *  project                    creator project: portfolio item that can be backed with Cold Kudos
+ *  projectMilestone           delivery plan; delivering a milestone releases Cold Kudos
+ *  projectBacking             a supporter's Cold Kudos position in a project
+ *  projectUpdate              public process log / milestone notes
+ *  follow                     supporter → creator follow edge
  *  galleryCollection          photo/image collection
  *  contentAccess              confidential-content access requests / kudos unlocks
  *  savedItem                  reader bookmarks of works/projects/gallery collections
@@ -32,6 +37,7 @@ import {
   timestamp,
   pgEnum,
   jsonb,
+  check,
 } from "drizzle-orm/pg-core";
 
 export const userRoleEnum = pgEnum("user_role", [
@@ -72,6 +78,16 @@ export const contentAccessMethodEnum = pgEnum("content_access_method", [
   "kudos",
 ]);
 
+export const projectStageEnum = pgEnum("project_stage", [
+  "idea",
+  "making",
+  "released",
+  "sustaining",
+  "cancelled",
+]);
+
+export const kudosCurrencyEnum = pgEnum("kudos_currency", ["hot", "cold"]);
+
 export const contentAccessStatusEnum = pgEnum("content_access_status", [
   "pending",
   "approved",
@@ -97,7 +113,9 @@ export const user = pgTable("user", {
   website: text("website"),
   location: text("location"),
   onboardingCompleted: boolean("onboarding_completed").notNull().default(false),
+  // Hot Kudos: the liquid, spendable balance. Cold Kudos live in project_backing.
   kudosBalance: integer("kudos_balance").notNull().default(25),
+  weeklyKudosClaimedAt: timestamp("weekly_kudos_claimed_at", { withTimezone: true }),
 });
 
 export const session = pgTable("session", {
@@ -179,6 +197,9 @@ export const work = pgTable(
     unlockMethod: contentUnlockMethodEnum("unlock_method").notNull().default("request"),
     kudosPrice: integer("kudos_price").notNull().default(0),
 
+    // Creator-declared AI assistance, JSON array of AiUsage values ("[]" = none)
+    aiUsageJson: text("ai_usage_json").notNull().default("[]"),
+
     // Category tags for article targeting, JSON array of strings
     tagsJson: text("tags_json").notNull().default("[]"),
 
@@ -216,9 +237,9 @@ export const kudos = pgTable(
   "kudos",
   {
     id: text("id").primaryKey(),
-    workId: text("work_id")
-      .notNull()
-      .references(() => work.id, { onDelete: "cascade" }),
+    // Exactly one of workId / projectId is set.
+    workId: text("work_id").references(() => work.id, { onDelete: "cascade" }),
+    projectId: text("project_id").references(() => project.id, { onDelete: "cascade" }),
     fromUserId: text("from_user_id").references(() => user.id, {
       onDelete: "set null",
     }),
@@ -226,7 +247,12 @@ export const kudos = pgTable(
     message: text("message"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
   },
-  (t) => [index("kudos_work_idx").on(t.workId)],
+  (t) => [
+    check("kudos_single_target", sql`num_nonnulls(${t.workId}, ${t.projectId}) = 1`),
+    index("kudos_work_idx").on(t.workId),
+    index("kudos_project_idx").on(t.projectId),
+    index("kudos_created_at_idx").on(t.createdAt),
+  ],
 );
 
 export const comment = pgTable(
@@ -287,12 +313,161 @@ export const project = pgTable(
     unlockMethod: contentUnlockMethodEnum("unlock_method").notNull().default("request"),
     kudosPrice: integer("kudos_price").notNull().default(0),
 
+    // ── Kudos & backing ──
+    stage: projectStageEnum("stage").notNull().default("making"),
+    pitch: text("pitch").notNull().default(""),
+    // Cold Kudos goal; 0 means the project is not seeking backers.
+    backingGoal: integer("backing_goal").notNull().default(0),
+    // Share of incoming Kudos routed to backers (0–30) and per-backing cap (100–300 % of amount).
+    backerSharePercent: integer("backer_share_percent").notNull().default(10),
+    returnCapPercent: integer("return_cap_percent").notNull().default(200),
+    // Denormalized counters, maintained inside the same transactions as the ledger.
+    coldKudosTotal: integer("cold_kudos_total").notNull().default(0),
+    backersCount: integer("backers_count").notNull().default(0),
+    kudosReceived: integer("kudos_received").notNull().default(0),
+
+    // ── Collaboration & originality ──
+    openRolesJson: text("open_roles_json").notNull().default("[]"), // JSON {title, description}[]
+    aiUsageJson: text("ai_usage_json").notNull().default("[]"), // JSON AiUsage[]
+    humanMadeConfirmedAt: timestamp("human_made_confirmed_at", { withTimezone: true }),
+
     createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(),
   },
   (t) => [
     index("project_creator_idx").on(t.creatorId),
     index("project_status_idx").on(t.status),
+    index("project_stage_idx").on(t.stage),
+  ],
+);
+
+// ── project milestones ────────────────────────────────────────────────────────
+
+export const projectMilestone = pgTable(
+  "project_milestone",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    projectId: text("project_id")
+      .notNull()
+      .references(() => project.id, { onDelete: "cascade" }),
+    position: integer("position").notNull().default(0),
+    title: text("title").notNull(),
+    description: text("description").notNull().default(""),
+    releasePercent: integer("release_percent").notNull(),
+    dueAt: timestamp("due_at", { withTimezone: true }),
+    deliveredAt: timestamp("delivered_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("project_milestone_project_idx").on(t.projectId)],
+);
+
+// ── project backings (Cold Kudos positions) ───────────────────────────────────
+
+export const projectBacking = pgTable(
+  "project_backing",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    projectId: text("project_id")
+      .notNull()
+      .references(() => project.id, { onDelete: "cascade" }),
+    backerId: text("backer_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    // Permanent 1-based order of arrival.
+    backerNumber: integer("backer_number").notNull(),
+    // Stage when the first Kudos were committed (drives the Early believer mark).
+    stageAtBacking: projectStageEnum("stage_at_backing").notNull(),
+    // Total Cold Kudos committed, and that total weighted by stage at each top-up.
+    amount: integer("amount").notNull(),
+    weightedAmount: integer("weighted_amount").notNull(),
+    // Portions of `amount` already released to the creator or thawed back to the backer.
+    released: integer("released").notNull().default(0),
+    refunded: integer("refunded").notNull().default(0),
+    // Hot Kudos returned to this backer so far (capped by project.returnCapPercent).
+    returned: integer("returned").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    lastToppedUpAt: timestamp("last_topped_up_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("project_backing_project_backer_unique").on(t.projectId, t.backerId),
+    index("project_backing_backer_idx").on(t.backerId),
+  ],
+);
+
+// ── project updates (process log) ─────────────────────────────────────────────
+
+export const projectUpdate = pgTable(
+  "project_update",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    projectId: text("project_id")
+      .notNull()
+      .references(() => project.id, { onDelete: "cascade" }),
+    authorId: text("author_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    kind: text("kind").notNull().default("process"), // "process" | "milestone" | "stage"
+    body: text("body").notNull(),
+    milestoneId: text("milestone_id").references(() => projectMilestone.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("project_update_project_idx").on(t.projectId),
+    index("project_update_created_at_idx").on(t.createdAt),
+  ],
+);
+
+// ── follows ───────────────────────────────────────────────────────────────────
+
+export const follow = pgTable(
+  "follow",
+  {
+    followerId: text("follower_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    creatorId: text("creator_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("follow_follower_creator_unique").on(t.followerId, t.creatorId),
+    index("follow_creator_idx").on(t.creatorId),
+  ],
+);
+
+// ── kudos ledger ──────────────────────────────────────────────────────────────
+
+export const kudosLedger = pgTable(
+  "kudos_ledger",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    currency: kudosCurrencyEnum("currency").notNull(),
+    // Signed change to the user's balance in `currency`.
+    delta: integer("delta").notNull(),
+    // See KudosLedgerKind for the closed set of reasons.
+    kind: text("kind").notNull(),
+    workId: text("work_id").references(() => work.id, { onDelete: "set null" }),
+    projectId: text("project_id").references(() => project.id, { onDelete: "set null" }),
+    counterpartyId: text("counterparty_id").references(() => user.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("kudos_ledger_user_idx").on(t.userId, t.createdAt),
+    index("kudos_ledger_project_idx").on(t.projectId),
   ],
 );
 
@@ -620,8 +795,30 @@ export const portfolioAnalyticsEventRelations = relations(
 
 // ── relations ─────────────────────────────────────────────────────────────────
 
-export const projectRelations = relations(project, ({ one }) => ({
+export const projectRelations = relations(project, ({ one, many }) => ({
   creator: one(user, { fields: [project.creatorId], references: [user.id] }),
+  milestones: many(projectMilestone),
+  backings: many(projectBacking),
+  updates: many(projectUpdate),
+  kudos: many(kudos),
+}));
+
+export const projectMilestoneRelations = relations(projectMilestone, ({ one }) => ({
+  project: one(project, { fields: [projectMilestone.projectId], references: [project.id] }),
+}));
+
+export const projectBackingRelations = relations(projectBacking, ({ one }) => ({
+  project: one(project, { fields: [projectBacking.projectId], references: [project.id] }),
+  backer: one(user, { fields: [projectBacking.backerId], references: [user.id] }),
+}));
+
+export const projectUpdateRelations = relations(projectUpdate, ({ one }) => ({
+  project: one(project, { fields: [projectUpdate.projectId], references: [project.id] }),
+  author: one(user, { fields: [projectUpdate.authorId], references: [user.id] }),
+}));
+
+export const kudosLedgerRelations = relations(kudosLedger, ({ one }) => ({
+  user: one(user, { fields: [kudosLedger.userId], references: [user.id] }),
 }));
 
 export const galleryCollectionRelations = relations(galleryCollection, ({ one }) => ({
@@ -639,6 +836,8 @@ export const userRelations = relations(user, ({ many, one }) => ({
   kudosPurchases: many(kudosPurchases),
   contentAccess: many(contentAccess),
   savedItems: many(savedItem),
+  backings: many(projectBacking),
+  kudosLedger: many(kudosLedger),
 }));
 
 export const workRelations = relations(work, ({ one, many }) => ({
@@ -654,6 +853,10 @@ export const kudosRelations = relations(kudos, ({ one }) => ({
   work: one(work, {
     fields: [kudos.workId],
     references: [work.id],
+  }),
+  project: one(project, {
+    fields: [kudos.projectId],
+    references: [project.id],
   }),
   fromUser: one(user, {
     fields: [kudos.fromUserId],
@@ -697,6 +900,11 @@ export type Project = typeof project.$inferSelect;
 export type GalleryCollection = typeof galleryCollection.$inferSelect;
 export type ContentAccess = typeof contentAccess.$inferSelect;
 export type SavedItem = typeof savedItem.$inferSelect;
+export type ProjectMilestone = typeof projectMilestone.$inferSelect;
+export type ProjectBacking = typeof projectBacking.$inferSelect;
+export type ProjectUpdate = typeof projectUpdate.$inferSelect;
+export type Follow = typeof follow.$inferSelect;
+export type KudosLedgerEntry = typeof kudosLedger.$inferSelect;
 
 export type UserRole = "reader" | "creator" | "publisher";
 
@@ -715,6 +923,27 @@ export type ContentUnlockMethod = "request" | "kudos";
 export type ContentKind = "work" | "project" | "gallery";
 export type ContentAccessMethod = "request" | "kudos";
 export type ContentAccessStatus = "pending" | "approved" | "denied" | "granted";
+
+export type ProjectStage = "idea" | "making" | "released" | "sustaining" | "cancelled";
+export type KudosCurrency = "hot" | "cold";
+export type KudosLedgerKind =
+  | "opening_balance"
+  | "signup_grant"
+  | "weekly_allowance"
+  | "purchase"
+  | "give"
+  | "receive"
+  | "back"
+  | "release"
+  | "return"
+  | "refund"
+  | "unlock_spend"
+  | "unlock_earn"
+  | "comment";
+
+/** Ways a creator may have used AI in their process. The work itself must be human-made. */
+export const AI_USAGE = ["research", "editing", "translation", "tools", "reference"] as const;
+export type AiUsage = (typeof AI_USAGE)[number];
 
 export type Lang = "ar" | "en" | "fr" | "es";
 

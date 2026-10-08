@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Amiri, Cairo, Fraunces, JetBrains_Mono, Manrope } from "next/font/google";
 import { Providers } from "./providers";
+import { MobileTabBar } from "@/components/mobile-tab-bar";
 import "@skaddosh/ui/globals.css";
 
 const siteUrl = new URL(process.env.NEXT_PUBLIC_APP_URL ?? "https://skaddosh");
@@ -119,7 +120,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" suppressHydrationWarning
       className={[manrope.variable, jetbrainsMono.variable, cairo.variable, amiri.variable, fraunces.variable].join(" ")}>
       <body className="min-h-screen bg-background font-sans antialiased">
-        <Providers>{children}</Providers>
+        <Providers>
+          {children}
+          <MobileTabBar />
+        </Providers>
       </body>
     </html>
   );

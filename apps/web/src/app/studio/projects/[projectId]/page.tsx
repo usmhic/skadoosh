@@ -1,13 +1,22 @@
 "use client";
 
-import { use, useState, useEffect, useCallback } from "react";
+import { use, useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { trpc } from "@/lib/trpc/provider";
 import { ImageUpload } from "@/components/studio/image-upload";
+import type { AiUsage } from "@skaddosh/db/schema";
 import {
   AccessControlFields,
   type AccessControlValue,
 } from "@/components/studio/access-control-fields";
+import {
+  BackingTermsFields,
+  HumanMadeFields,
+  OpenRolesField,
+  ProjectLifecycle,
+  type BackingTerms,
+  type OpenRole,
+} from "@/components/studio/project-kudos-fields";
 import { Button } from "@skaddosh/ui/components/ui/button";
 import { ConfirmDialog } from "@skaddosh/ui/components/confirm-dialog";
 import { Input } from "@skaddosh/ui/components/ui/input";
@@ -45,7 +54,7 @@ export default function ProjectEditorPage({
   const router = useRouter();
   const utils = trpc.useUtils();
 
-  const { data: project, isPending } = trpc.projects.byId.useQuery({
+  const { data: project, isPending, refetch } = trpc.projects.byId.useQuery({
     id: projectId,
   });
 
@@ -64,13 +73,22 @@ export default function ProjectEditorPage({
     kudosPrice: 0,
   });
   const [published, setPublished] = useState(false);
+  const [pitch, setPitch] = useState("");
+  const [terms, setTerms] = useState<BackingTerms>({ backingGoal: 0, backerSharePercent: 10, returnCapPercent: 200 });
+  const [openRoles, setOpenRoles] = useState<OpenRole[]>([]);
+  const [aiUsage, setAiUsage] = useState<string[]>([]);
+  const [humanMade, setHumanMade] = useState(false);
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [deleteOpen, setDeleteOpen] = useState(false);
 
+  // Initialise the form once per project. Later refetches (after saving milestones, posting an
+  // update, or changing stage) must not overwrite edits the creator hasn't saved yet.
+  const initialisedFor = useRef<string | null>(null);
   useEffect(() => {
-    if (!project) return;
+    if (!project || initialisedFor.current === project.id) return;
+    initialisedFor.current = project.id;
     setTitle(project.title);
     setDescription(project.description);
     setCoverImage(project.coverImage ?? null);
@@ -85,6 +103,15 @@ export default function ProjectEditorPage({
       kudosPrice: project.kudosPrice,
     });
     setPublished(project.status === "published");
+    setPitch(project.pitch);
+    setTerms({
+      backingGoal: project.backingGoal,
+      backerSharePercent: project.backerSharePercent,
+      returnCapPercent: project.returnCapPercent,
+    });
+    setOpenRoles(project.openRoles);
+    setAiUsage(project.aiUsage);
+    setHumanMade(Boolean(project.humanMadeConfirmedAt));
   }, [project]);
 
   const update = trpc.projects.update.useMutation({
@@ -119,8 +146,14 @@ export default function ProjectEditorPage({
           visibility: access.visibility,
           unlockMethod: access.unlockMethod,
           kudosPrice: access.kudosPrice,
+          pitch: pitch.trim(),
+          ...terms,
+          openRoles: openRoles.filter((role) => role.title.trim()),
+          aiUsage: aiUsage as AiUsage[],
+          humanMadeConfirmed: humanMade,
         });
         if (nextPublished !== undefined) setPublished(nextPublished);
+        await refetch();
       } catch (error) {
         setSaveError(
           error instanceof Error
@@ -144,6 +177,12 @@ export default function ProjectEditorPage({
       accentColor,
       access,
       update,
+      pitch,
+      terms,
+      openRoles,
+      aiUsage,
+      humanMade,
+      refetch,
     ],
   );
 
@@ -196,17 +235,14 @@ export default function ProjectEditorPage({
         />
 
         <div className="hidden items-center gap-2 sm:flex">
-          <Button
-            variant="ghost"
-            size="sm"
-            asChild
-            className="text-muted-foreground"
-          >
-            <Link href="/portfolio/edit">
-              <ExternalLinkIcon className="size-3.5 mr-1.5" />
-              Portfolio
-            </Link>
-          </Button>
+          {published ? (
+            <Button variant="ghost" size="sm" asChild className="text-muted-foreground">
+              <Link href={`/projects/${projectId}`}>
+                <ExternalLinkIcon className="size-3.5 mr-1.5" />
+                View page
+              </Link>
+            </Button>
+          ) : null}
           <Button
             variant={published ? "outline" : "default"}
             size="sm"
@@ -261,15 +297,27 @@ export default function ProjectEditorPage({
             />
           </div>
 
+          {/* Pitch */}
+          <div className="space-y-2">
+            <Label htmlFor="proj-pitch">One-line pitch</Label>
+            <Input
+              id="proj-pitch"
+              value={pitch}
+              maxLength={160}
+              onChange={(e) => setPitch(e.target.value)}
+              placeholder="A hand-drawn atlas of Morocco's old salt roads."
+            />
+          </div>
+
           {/* Description */}
           <div className="space-y-2">
-            <Label htmlFor="proj-desc">Description</Label>
+            <Label htmlFor="proj-desc">Story</Label>
             <textarea
               id="proj-desc"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              rows={5}
-              placeholder="What is this project about?"
+              rows={8}
+              placeholder="What are you making, why, and what will backing pay for?"
               className="w-full resize-none rounded-xl border border-border bg-background px-4 py-3 text-sm leading-relaxed placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-ring"
             />
           </div>
@@ -377,6 +425,48 @@ export default function ProjectEditorPage({
             <AccessControlFields value={access} onChange={setAccess} />
           </div>
 
+          {/* Kudos & backing */}
+          <div className="space-y-6 border-t border-border pt-6">
+            <div>
+              <h2 className="font-display text-xl font-semibold">Kudos & backing</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                How supporters can back this project, and how you deliver it in public.
+              </p>
+            </div>
+            <BackingTermsFields
+              value={terms}
+              onChange={setTerms}
+              backersCount={project?.backersCount ?? 0}
+              locked={{
+                backingGoal: project?.backingGoal ?? 0,
+                backerSharePercent: project?.backerSharePercent ?? 0,
+                returnCapPercent: project?.returnCapPercent ?? 100,
+              }}
+            />
+            {project ? (
+              <ProjectLifecycle
+                projectId={projectId}
+                stage={project.stage}
+                milestones={project.milestones}
+                published={published}
+                onChanged={() => void refetch()}
+              />
+            ) : null}
+          </div>
+
+          {/* Collaboration */}
+          <div className="border-t border-border pt-6">
+            <OpenRolesField value={openRoles} onChange={setOpenRoles} />
+          </div>
+
+          {/* Originality */}
+          <HumanMadeFields
+            aiUsage={aiUsage}
+            onAiUsageChange={setAiUsage}
+            confirmed={humanMade}
+            onConfirmedChange={setHumanMade}
+          />
+
           {/* Additional images */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
@@ -466,7 +556,7 @@ export default function ProjectEditorPage({
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
         title="Delete this project?"
-        description={`“${title || "Untitled project"}” and its portfolio content will be permanently removed. This cannot be undone.`}
+        description={`“${title || "Untitled project"}” will be permanently removed. Any Cold Kudos still locked go back to their backers first. This cannot be undone.`}
         confirmLabel="Delete project"
         destructive
         pending={deleteMutation.isPending}

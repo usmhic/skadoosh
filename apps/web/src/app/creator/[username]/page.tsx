@@ -19,9 +19,9 @@ import { cn } from "@skaddosh/ui/lib/utils";
 import {
   ArrowUpRightIcon,
   BookOpenIcon,
-  ClockIcon,
   FolderOpenIcon,
   GlobeIcon,
+  HeartHandshakeIcon,
   ImageIcon,
   LayoutDashboardIcon,
   LockIcon,
@@ -34,8 +34,11 @@ import {
   SparklesIcon,
 } from "lucide-react";
 import { SEED_CREATOR, SEED_WORKS } from "@skaddosh/db/seed-data";
+import { ProjectCard as SharedProjectCard, WorkCard } from "@/components/discovery/cards";
+import { FollowButton } from "@/components/follow-button";
+import { ReputationSignals } from "@/components/kudos/kudos-ui";
 
-type PublicTab = "all" | "articles" | "gallery" | "projects" | "portfolio";
+type PublicTab = "all" | "articles" | "projects" | "believes" | "gallery" | "portfolio";
 type OwnerTab = "overview" | "publishing";
 type ActiveTab = PublicTab | OwnerTab;
 
@@ -45,14 +48,6 @@ interface GalleryFolder {
   description: string;
   coverImage?: string | null;
   imageCount: number;
-}
-interface Project {
-  id: string;
-  title: string;
-  description: string;
-  tags: string[];
-  url?: string | null;
-  coverImage?: string | null;
 }
 type ContentWork = {
   id: string;
@@ -67,7 +62,7 @@ type ContentWork = {
 export default function CreatorPage({ params }: { params: Promise<{ username: string }> }) {
   const { username } = use(params);
   const { data: session } = useSession();
-  const { data, isLoading } = trpc.creators.byUsername.useQuery({ username });
+  const { data, isLoading, refetch } = trpc.creators.byUsername.useQuery({ username });
   const { data: me } = trpc.users.me.useQuery(undefined, { enabled: !!session });
   const { data: worksData } = trpc.works.mine.useQuery(undefined, { enabled: !!session });
   const { data: portfolioData } = trpc.portfolios.mine.useQuery(undefined, { enabled: !!session });
@@ -95,11 +90,11 @@ export default function CreatorPage({ params }: { params: Promise<{ username: st
   }
 
   const initials = creator.name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase();
-  const totalKudos = publicWorks.reduce((s, w) => s + ((w as ContentWork).kudosCount ?? 0), 0);
   const isOwner = me?.user.username === creator.username;
 
   const galleryFolders: GalleryFolder[] = portfolio?.gallery ?? [];
-  const allProjects: Project[] = portfolio?.projects ?? [];
+  const projects = data?.projects ?? [];
+  const believesIn = data?.believesIn ?? [];
 
   const myWorks = worksData ?? [];
   const publishedCount = myWorks.filter((w) => w.published).length;
@@ -117,10 +112,11 @@ export default function CreatorPage({ params }: { params: Promise<{ username: st
     count?: number;
     premium?: boolean;
   }> = [
-    { value: "all", label: "All", icon: SparklesIcon, count: publicWorks.length + galleryFolders.length + allProjects.length },
-    { value: "articles", label: "Articles", icon: BookOpenIcon, count: publicWorks.length },
+    { value: "all", label: "All", icon: SparklesIcon, count: publicWorks.length + galleryFolders.length + projects.length },
+    { value: "articles", label: "Pieces", icon: BookOpenIcon, count: publicWorks.length },
+    { value: "projects", label: "Projects", icon: FolderOpenIcon, count: projects.length },
+    { value: "believes", label: "Believes in", icon: HeartHandshakeIcon, count: believesIn.length },
     { value: "gallery", label: "Gallery", icon: ImageIcon, count: galleryFolders.length },
-    { value: "projects", label: "Projects", icon: FolderOpenIcon, count: allProjects.length },
     { value: "portfolio", label: "Portfolio", icon: SparklesIcon, premium: !portfolio },
   ];
 
@@ -137,12 +133,12 @@ export default function CreatorPage({ params }: { params: Promise<{ username: st
   type FeedItem =
     | { kind: "article"; data: ContentWork }
     | { kind: "gallery"; data: GalleryFolder }
-    | { kind: "project"; data: Project };
+    | { kind: "project"; data: (typeof projects)[number] };
 
   const allFeedItems: FeedItem[] = [
+    ...projects.map((p) => ({ kind: "project" as const, data: p })),
     ...(publicWorks as ContentWork[]).map((w) => ({ kind: "article" as const, data: w })),
     ...galleryFolders.map((f) => ({ kind: "gallery" as const, data: f })),
-    ...allProjects.map((p) => ({ kind: "project" as const, data: p })),
   ];
 
   return (
@@ -219,16 +215,8 @@ export default function CreatorPage({ params }: { params: Promise<{ username: st
 
               <div className="mt-4 flex flex-wrap items-center gap-4">
                 <span className="flex items-center gap-1.5 text-xs">
-                  <span className="font-semibold text-foreground tabular-nums">{publicWorks.length}</span>
-                  <span className="text-muted-foreground">reads</span>
-                </span>
-                <span className="h-3.5 w-px bg-border" />
-                <span className="flex items-center gap-1.5 text-xs">
-                  <span className="inline-flex size-4 items-center justify-center rounded-full border border-muted-foreground font-display text-[0.6rem] font-semibold italic leading-none text-muted-foreground">
-                    K
-                  </span>
-                  <span className="font-semibold text-foreground tabular-nums">{totalKudos}</span>
-                  <span className="text-muted-foreground">Cold Kudos</span>
+                  <span className="font-semibold text-foreground tabular-nums">{data?.followers ?? 0}</span>
+                  <span className="text-muted-foreground">followers</span>
                 </span>
                 {"location" in creator && creator.location ? (
                   <>
@@ -250,9 +238,20 @@ export default function CreatorPage({ params }: { params: Promise<{ username: st
                     </Link>
                   </>
                 ) : null}
+                {!isOwner && data?.creator.id ? (
+                  <span className="ml-auto">
+                    <FollowButton
+                      creatorId={data.creator.id}
+                      following={data.viewer.following}
+                      signedIn={Boolean(session)}
+                      onChanged={() => void refetch()}
+                    />
+                  </span>
+                ) : null}
               </div>
             </div>
           </div>
+          {data?.reputation ? <ReputationSignals reputation={data.reputation} className="mt-6" /> : null}
         </div>
       </section>
 
@@ -357,13 +356,14 @@ export default function CreatorPage({ params }: { params: Promise<{ username: st
                       work={w}
                       accent={accent}
                       isOwner={isOwner}
+                      creator={creator}
                     />
                   );
                 }
                 if (item.kind === "gallery") {
                   return <GalleryCard key={`gallery-${item.data.id}`} folder={item.data} />;
                 }
-                return <ProjectCard key={`project-${item.data.id}-${idx}`} project={item.data} />;
+                return <SharedProjectCard key={`project-${item.data.id}-${idx}`} project={item.data} />;
               })}
             </div>
           ) : (
@@ -393,6 +393,7 @@ export default function CreatorPage({ params }: { params: Promise<{ username: st
                   work={w}
                   accent={w.accentColor ?? "#6366f1"}
                   isOwner={isOwner}
+                  creator={creator}
                 />
               ))}
             </div>
@@ -440,21 +441,46 @@ export default function CreatorPage({ params }: { params: Promise<{ username: st
       {/* ── Projects tab ── */}
       {activeTab === "projects" ? (
         <section>
-          {allProjects.length > 0 ? (
-            <div className="grid gap-4 sm:grid-cols-2">
-              {allProjects.map((project) => (
-                <ProjectCard key={project.id} project={project} />
+          {projects.length > 0 ? (
+            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {projects.map((project) => (
+                <SharedProjectCard key={project.id} project={project} />
               ))}
             </div>
           ) : (
             <EmptyTab
               icon={FolderOpenIcon}
               title="No projects yet"
-              description={isOwner ? "Add projects in Portfolio." : "No projects added yet."}
+              description={isOwner ? "Open a project to share work in progress and find early backers." : "No published projects yet."}
+            >
+              {isOwner ? (
+                <Button size="sm" variant="outline" onClick={() => setCreateOpen(true)}>
+                  <PlusIcon className="size-3.5" /> New project
+                </Button>
+              ) : null}
+            </EmptyTab>
+          )}
+        </section>
+      ) : null}
+
+      {/* ── Believes in tab ── */}
+      {activeTab === "believes" ? (
+        <section>
+          {believesIn.length > 0 ? (
+            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {believesIn.map((project) => (
+                <SharedProjectCard key={project.id} project={project} />
+              ))}
+            </div>
+          ) : (
+            <EmptyTab
+              icon={HeartHandshakeIcon}
+              title="Not backing anything yet"
+              description={isOwner ? "Projects you back show up here, with your backer number." : "Projects this person backs will show up here."}
             >
               {isOwner ? (
                 <Button size="sm" variant="outline" asChild>
-                  <Link href="/portfolio/edit">Open Portfolio</Link>
+                  <Link href="/?mode=backing">Find projects to back</Link>
                 </Button>
               ) : null}
             </EmptyTab>
@@ -527,7 +553,7 @@ export default function CreatorPage({ params }: { params: Promise<{ username: st
             <StatCard label="Total Works" value={myWorks.length} />
             <StatCard label="Published" value={publishedCount} />
             <StatCard label="Drafts" value={draftCount} />
-            <StatCard label="Cold Kudos" value={myTotalKudos} />
+            <StatCard label="Kudos received" value={myTotalKudos} />
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <Card>
@@ -607,7 +633,7 @@ export default function CreatorPage({ params }: { params: Promise<{ username: st
                   <p className="mt-3 truncate text-sm font-medium">
                     {(w.title as Record<string, string>).en || (w.title as Record<string, string>).ar || "Untitled"}
                   </p>
-                  <p className="mt-1 text-xs text-muted-foreground">{w.kudosCount} Cold Kudos</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{w.kudosCount} Kudos received</p>
                   <div className="mt-3">
                     <Button size="sm" variant="outline" asChild className="h-7 text-xs">
                       <Link href={`/studio/works/${w.id}`}>Edit</Link>
@@ -637,13 +663,28 @@ function ArticleCard({
   work,
   accent,
   isOwner,
+  creator,
 }: {
   work: ContentWork;
   accent: string;
   isOwner: boolean;
+  creator: { name: string; username?: string | null; image?: string | null };
 }) {
   return (
-    <div className="group relative flex min-h-52 flex-col gap-3 rounded-xl border border-border bg-card p-5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/5">
+    <div className="group relative">
+      <WorkCard
+        work={{
+          kind: "work",
+          id: work.id,
+          type: work.type ?? "story",
+          title: work.title,
+          tag: work.tag,
+          accentColor: accent,
+          readingTime: work.readingTime ?? null,
+          kudosCount: work.kudosCount ?? 0,
+          creator: { name: creator.name, username: creator.username ?? null, image: creator.image ?? null },
+        }}
+      />
       {isOwner ? (
         <Link
           href={`/studio/works/${work.id}`}
@@ -653,34 +694,6 @@ function ArticleCard({
           <PencilIcon className="size-3 text-muted-foreground" />
         </Link>
       ) : null}
-      <Link href={`/read/${work.id}`} className="flex flex-1 flex-col gap-3">
-        <div className="flex items-center justify-between gap-2">
-          <Badge
-            variant="outline"
-            style={{
-              color: accent,
-              borderColor: `${accent}30`,
-              backgroundColor: `${accent}08`,
-            }}
-            className="text-[0.58rem] font-semibold uppercase tracking-wider"
-          >
-            {work.type}
-          </Badge>
-          {work.readingTime ? (
-            <span className="flex items-center gap-1 text-[0.6rem] text-muted-foreground">
-              <ClockIcon className="size-3" />
-              {work.readingTime} min
-            </span>
-          ) : null}
-        </div>
-        <div className="flex-1">
-          <h2 className="font-arabic text-base font-bold leading-snug text-foreground" dir="rtl">
-            {work.title.ar}
-          </h2>
-          <p className="font-display text-sm italic text-muted-foreground">{work.title.en}</p>
-        </div>
-        <p className="text-xs text-muted-foreground">{work.tag.en}</p>
-      </Link>
     </div>
   );
 }
@@ -716,54 +729,6 @@ function GalleryCard({ folder }: { folder: GalleryFolder }) {
     </div>
   );
 }
-
-function ProjectCard({ project }: { project: Project }) {
-  return (
-    <div className="flex flex-col gap-3 rounded-xl border border-border bg-card p-5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/5">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <div className="mb-1 flex items-center gap-1.5">
-            <Badge variant="outline" className="text-[0.55rem] uppercase tracking-wide">Project</Badge>
-          </div>
-          <p className="font-medium">{project.title}</p>
-        </div>
-        {project.url ? (
-          <a
-            href={project.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="shrink-0 rounded-lg border border-border p-1.5 text-muted-foreground transition hover:bg-muted hover:text-foreground"
-            title="Visit project"
-          >
-            <ArrowUpRightIcon className="size-3.5" />
-          </a>
-        ) : null}
-      </div>
-      {project.description ? (
-        <p className="line-clamp-3 text-sm leading-6 text-muted-foreground">{project.description}</p>
-      ) : null}
-      {project.tags.length > 0 ? (
-        <div className="flex flex-wrap gap-1.5">
-          {project.tags.slice(0, 6).map((t) => (
-            <span
-              key={t}
-              className="rounded-full bg-muted px-2 py-0.5 text-[0.65rem] font-medium text-muted-foreground"
-            >
-              {t}
-            </span>
-          ))}
-          {project.tags.length > 6 ? (
-            <span className="rounded-full bg-muted px-2 py-0.5 text-[0.65rem] text-muted-foreground">
-              +{project.tags.length - 6}
-            </span>
-          ) : null}
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-// ── Utility components ──────────────────────────────────────────────────────
 
 function StatCard({ label, value }: { label: string; value: number }) {
   return (

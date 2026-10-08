@@ -5,6 +5,8 @@ import { trpc } from "@/lib/trpc/provider";
 import { useLang } from "@/lib/lang-context";
 import { BodyContent } from "@/components/body-content";
 import { AccessControlFields, type AccessControlValue } from "@/components/studio/access-control-fields";
+import { AI_USAGE_LABEL } from "@/components/kudos/kudos-ui";
+import type { AiUsage } from "@skaddosh/db/schema";
 import { Button }   from "@skaddosh/ui/components/ui/button";
 import { Input }    from "@skaddosh/ui/components/ui/input";
 import { Separator } from "@skaddosh/ui/components/ui/separator";
@@ -46,6 +48,7 @@ export default function WorkEditorPage({ params }: { params: Promise<{ workId: s
   const [wc,      setWc]      = useState(0);
   const [access, setAccess] = useState<AccessControlValue>({ visibility: "public", unlockMethod: "request", kudosPrice: 0 });
   const [accessOpen, setAccessOpen] = useState(false);
+  const [aiUsage, setAiUsage] = useState<AiUsage[]>([]);
 
   const [titles, setTitles] = useState<Record<Lang,string>>({ ar: seed?.title.ar??"", en: seed?.title.en??"", fr: seed?.title.fr??"", es: seed?.title.es??"" });
   const [tags,   setTags]   = useState<Record<Lang,string>>({ ar: seed?.tag.ar??"",   en: seed?.tag.en??"",   fr: seed?.tag.fr??"",   es: seed?.tag.es??"" });
@@ -85,6 +88,7 @@ export default function WorkEditorPage({ params }: { params: Promise<{ workId: s
       unlockMethod: currentWork.unlockMethod,
       kudosPrice: currentWork.kudosPrice,
     });
+    setAiUsage(currentWork.aiUsage);
   }, [currentWork]);
 
   const insertAround = useCallback((wrap: string) => {
@@ -164,6 +168,7 @@ export default function WorkEditorPage({ params }: { params: Promise<{ workId: s
       visibility: access.visibility,
       unlockMethod: access.unlockMethod,
       kudosPrice: access.kudosPrice,
+      aiUsage,
     });
     setSaving(false);
   }
@@ -180,6 +185,7 @@ export default function WorkEditorPage({ params }: { params: Promise<{ workId: s
       visibility: access.visibility,
       unlockMethod: access.unlockMethod,
       kudosPrice: access.kudosPrice,
+      aiUsage,
     });
     setSaving(false);
   }
@@ -347,9 +353,35 @@ export default function WorkEditorPage({ params }: { params: Promise<{ workId: s
       <Dialog open={accessOpen} onOpenChange={setAccessOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Access & pricing</DialogTitle>
+            <DialogTitle>Access, pricing & AI use</DialogTitle>
           </DialogHeader>
           <AccessControlFields value={access} onChange={setAccess} />
+          <div className="space-y-2 border-t border-border pt-4">
+            <p className="text-sm font-semibold">Did AI help with your process?</p>
+            <p className="text-xs leading-5 text-muted-foreground">
+              Your writing must be your own. Readers see what AI helped with. Nothing selected means no AI was used.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {Object.entries(AI_USAGE_LABEL).map(([key, label]) => {
+                const value = key as AiUsage;
+                const on = aiUsage.includes(value);
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    aria-pressed={on}
+                    onClick={() => setAiUsage(on ? aiUsage.filter((u) => u !== value) : [...aiUsage, value])}
+                    className={cn(
+                      "rounded-full border px-3 py-1 text-xs font-medium",
+                      on ? "border-foreground bg-foreground text-background" : "border-border text-muted-foreground",
+                    )}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
           <Button size="sm" onClick={() => setAccessOpen(false)}>Done</Button>
         </DialogContent>
       </Dialog>

@@ -4,6 +4,7 @@ import { and, eq } from "drizzle-orm";
 import { db, contentAccess, work, project, galleryCollection, user } from "@skaddosh/db";
 import { protectedProcedure, router } from "../trpc";
 import { notifyOwnerInbox } from "./portfolios";
+import { creditHot, debitHot, distributeProjectIncome, lockProject } from "../lib/kudos-ledger";
 
 const contentTypeSchema = z.enum(["work", "project", "gallery"]);
 type ContentType = z.infer<typeof contentTypeSchema>;
@@ -115,35 +116,45 @@ export const accessRouter = router({
       const existing = await getExistingGrant(input.contentType, input.contentId, ctx.session.user.id);
       if (existing?.status === "granted") return { ok: true };
 
-      const [buyer] = await db.select().from(user).where(eq(user.id, ctx.session.user.id)).limit(1);
-      if (!buyer) throw new TRPCError({ code: "NOT_FOUND", message: "User not found." });
-      if (buyer.kudosBalance < row.kudosPrice) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Not enough kudos balance." });
-      }
+      const buyerId = ctx.session.user.id;
+      const price = row.kudosPrice;
+      const ref = {
+        kind: "unlock_spend" as const,
+        workId: input.contentType === "work" ? input.contentId : null,
+        projectId: input.contentType === "project" ? input.contentId : null,
+        counterpartyId: row.creatorId,
+      };
 
-      await db
-        .update(user)
-        .set({ kudosBalance: buyer.kudosBalance - row.kudosPrice })
-        .where(eq(user.id, buyer.id));
+      await db.transaction(async (tx) => {
+        await debitHot(tx, buyerId, price, ref);
 
-      const now = new Date();
-      if (existing) {
-        await db
-          .update(contentAccess)
-          .set({ status: "granted", method: "kudos", kudosSpent: row.kudosPrice, decidedAt: now })
-          .where(eq(contentAccess.id, existing.id));
-      } else {
-        await db.insert(contentAccess).values({
-          contentType: input.contentType,
-          contentId: input.contentId,
-          userId: ctx.session.user.id,
-          method: "kudos",
-          status: "granted",
-          kudosSpent: row.kudosPrice,
-          createdAt: now,
-          decidedAt: now,
-        });
-      }
+        // The creator earns the unlock. For projects, backers take their share first.
+        if (input.contentType === "project") {
+          const locked = await lockProject(tx, input.contentId);
+          await distributeProjectIncome(tx, locked, price, buyerId, "unlock_earn");
+        } else {
+          await creditHot(tx, row.creatorId, price, { ...ref, kind: "unlock_earn", counterpartyId: buyerId });
+        }
+
+        const now = new Date();
+        if (existing) {
+          await tx
+            .update(contentAccess)
+            .set({ status: "granted", method: "kudos", kudosSpent: price, decidedAt: now })
+            .where(eq(contentAccess.id, existing.id));
+        } else {
+          await tx.insert(contentAccess).values({
+            contentType: input.contentType,
+            contentId: input.contentId,
+            userId: buyerId,
+            method: "kudos",
+            status: "granted",
+            kudosSpent: price,
+            createdAt: now,
+            decidedAt: now,
+          });
+        }
+      });
 
       return { ok: true };
     }),
