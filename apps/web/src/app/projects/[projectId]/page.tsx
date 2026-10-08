@@ -6,27 +6,28 @@ import { trpc } from "@/lib/trpc/provider";
 import type { PublicProject } from "@/lib/trpc/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@skaddosh/ui/components/ui/avatar";
 import { Button } from "@skaddosh/ui/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@skaddosh/ui/components/ui/dialog";
 import { cn } from "@skaddosh/ui/lib/utils";
 import {
   ArrowUpRightIcon,
   CheckCircle2Icon,
+  ChevronRightIcon,
   CircleDashedIcon,
   CodeIcon,
+  FileBadgeIcon,
   FlagIcon,
+  HandHeartIcon,
   HandIcon,
+  HandshakeIcon,
   Loader2Icon,
   LockIcon,
   PenLineIcon,
   SparklesIcon,
+  SproutIcon,
 } from "lucide-react";
+import { GenerativeCover } from "@/components/gallery/generative-cover";
+import { ContributeDialog, ContributorsSection } from "@/components/project/contributors-section";
+import { LicensesSection } from "@/components/project/licenses-section";
+import { mediumLabel } from "@/lib/mediums";
 import { BodyContent } from "@/components/body-content";
 import { FollowButton } from "@/components/follow-button";
 import { BackProjectDialog, GiveKudosDialog } from "@/components/kudos/kudos-dialogs";
@@ -34,9 +35,8 @@ import {
   BackingProgress,
   HumanMadeNote,
   KudosAmount,
-  KudosMark,
   StageBadge,
-  StageTrack,
+  VerifiedBadge,
   initials,
   timeAgo,
 } from "@/components/kudos/kudos-ui";
@@ -50,10 +50,10 @@ export default function ProjectPage({ params }: { params: Promise<{ projectId: s
   if (!project) {
     return (
       <div className="mx-auto max-w-xl px-4 py-24 text-center">
-        <p className="font-display text-2xl font-semibold">Project not found</p>
+        <p className="font-display text-4xl">Project not found</p>
         <p className="mt-2 text-sm text-muted-foreground">It may still be a draft, or it was removed.</p>
         <Button asChild variant="outline" className="mt-6 rounded-full">
-          <Link href="/?mode=backing">Discover projects</Link>
+          <Link href="/">Explore the gallery</Link>
         </Button>
       </div>
     );
@@ -65,58 +65,53 @@ export default function ProjectPage({ params }: { params: Promise<{ projectId: s
 function ProjectView({ project, refetch }: { project: PublicProject; refetch: () => void }) {
   const [giveOpen, setGiveOpen] = useState(false);
   const [backOpen, setBackOpen] = useState(false);
-  const [roleOpen, setRoleOpen] = useState<string | null>(null);
+  const [contribute, setContribute] = useState<{ role: string } | null>(null);
+  const offers = trpc.licenses.offers.useQuery({ projectId: project.id });
   const isCancelled = project.stage === "cancelled";
   const kudosNotes = project.recentKudos.filter((k) => k.message).slice(0, 6);
+  const canLicense = (offers.data?.offers.length ?? 0) > 0;
+  const signedIn = project.viewer.signedIn;
 
   return (
-    <div className="pb-20">
-      {/* Hero */}
-      <section
-        className="relative overflow-hidden border-b border-border"
-        style={{
-          background: project.coverImage
-            ? undefined
-            : `radial-gradient(80% 120% at 0% 0%, ${project.accentColor}40, transparent 60%), radial-gradient(70% 100% at 100% 100%, ${project.accentColor}26, transparent 60%)`,
-        }}
-      >
-        {project.coverImage ? (
-          <>
-            <img src={project.coverImage} alt="" className="absolute inset-0 size-full object-cover" />
-            <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-background/30" />
-          </>
-        ) : null}
-        <div className="relative mx-auto w-full max-w-6xl px-4 pb-10 pt-14 sm:px-6 lg:px-8 lg:pt-20">
-          <div className="flex flex-wrap items-center gap-2">
-            <StageBadge stage={project.stage} />
-            {project.tags.slice(0, 4).map((tag) => (
-              <span key={tag} className="rounded-full border border-border bg-background/70 px-2 py-0.5 text-[0.68rem] text-muted-foreground">
+    <div className="pb-24">
+      <div className="mx-auto w-full max-w-[96rem] px-4 pt-6 sm:px-6 lg:px-10">
+        <div className="relative aspect-[4/3] overflow-hidden rounded-[2rem] bg-muted ring-1 ring-border/60 sm:aspect-[21/9]">
+          {project.coverImage ? (
+            <img src={project.coverImage} alt="" className="size-full object-cover" />
+          ) : (
+            <GenerativeCover id={project.id} accent={project.accentColor} medium={project.medium} title={project.title} />
+          )}
+        </div>
+
+        <header className="mt-8 max-w-4xl">
+          <div className="flex flex-wrap items-center gap-2 text-xs">
+            <span className="rounded-full bg-muted px-2.5 py-1 font-medium">{mediumLabel(project.medium)}</span>
+            {project.stage !== "released" && project.stage !== "sustaining" ? <StageBadge stage={project.stage} /> : null}
+            {project.tags.slice(0, 3).map((tag) => (
+              <span key={tag} className="rounded-full border border-border px-2.5 py-1 text-muted-foreground">
                 {tag.replace(/-/g, " ")}
               </span>
             ))}
           </div>
-          <h1 className="mt-4 max-w-3xl text-balance font-display text-4xl font-semibold leading-[1.05] tracking-tight sm:text-5xl">
+          <h1 className="mt-5 text-balance font-display text-5xl leading-[0.95] tracking-tight sm:text-7xl">
             {project.title || "Untitled project"}
           </h1>
-          {project.pitch ? <p className="mt-4 max-w-2xl text-pretty text-lg leading-8 text-muted-foreground">{project.pitch}</p> : null}
-          <div className="mt-6 flex flex-wrap items-center gap-3">
-            <Link href={`/${project.creator.username ?? ""}`} className="flex items-center gap-2.5">
-              <Avatar className="size-9">
+          {project.pitch ? <p className="mt-5 max-w-2xl text-pretty text-xl leading-8 text-muted-foreground">{project.pitch}</p> : null}
+          <div className="mt-7 flex flex-wrap items-center gap-3">
+            <Link href={`/${project.creator.username ?? ""}`} className="flex items-center gap-3">
+              <Avatar className="size-10">
                 {project.creator.image ? <AvatarImage src={project.creator.image} alt="" className="object-cover" /> : null}
                 <AvatarFallback className="text-xs font-semibold">{initials(project.creator.name)}</AvatarFallback>
               </Avatar>
               <span>
-                <span className="block text-sm font-semibold">{project.creator.name}</span>
+                <span className="flex items-center gap-1 text-sm font-medium">
+                  {project.creator.name} <VerifiedBadge verified={project.creator.verified} />
+                </span>
                 <span className="block text-xs text-muted-foreground">@{project.creator.username}</span>
               </span>
             </Link>
             {!project.viewer.isOwner ? (
-              <FollowButton
-                creatorId={project.creator.id}
-                following={project.viewer.following}
-                signedIn={project.viewer.signedIn}
-                onChanged={refetch}
-              />
+              <FollowButton creatorId={project.creator.id} following={project.viewer.following} signedIn={signedIn} onChanged={refetch} />
             ) : (
               <Button asChild size="sm" variant="outline" className="rounded-full">
                 <Link href={`/studio/projects/${project.id}`}>
@@ -125,31 +120,32 @@ function ProjectView({ project, refetch }: { project: PublicProject; refetch: ()
               </Button>
             )}
           </div>
-        </div>
-      </section>
+        </header>
+      </div>
 
-      <div className="mx-auto grid w-full max-w-6xl gap-10 px-4 pt-10 sm:px-6 lg:grid-cols-[minmax(0,1fr)_22rem] lg:px-8">
-        {/* Main column */}
-        <div className="min-w-0 space-y-12">
+      <div className="mx-auto mt-14 grid w-full max-w-[96rem] gap-14 px-4 sm:px-6 lg:grid-cols-[minmax(0,1fr)_24rem] lg:px-10">
+        <div className="min-w-0 space-y-20">
           <Section title="The story">
             {project.locked ? (
               <LockedStory project={project} onUnlocked={refetch} />
             ) : (
               <>
                 {project.description ? (
-                  <BodyContent text={project.description} lang="en" accent={project.accentColor} />
+                  <div className="max-w-2xl">
+                    <BodyContent text={project.description} lang="en" accent={project.accentColor} />
+                  </div>
                 ) : (
                   <p className="text-sm text-muted-foreground">The creator hasn&apos;t written the story yet.</p>
                 )}
                 {project.images.length ? (
-                  <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                  <div className="mt-8 grid gap-4 sm:grid-cols-2">
                     {project.images.map((src) => (
-                      <img key={src} src={src} alt="" className="aspect-[4/3] w-full rounded-2xl object-cover" />
+                      <img key={src} src={src} alt="" className="w-full rounded-2xl object-cover" />
                     ))}
                   </div>
                 ) : null}
                 {project.url || project.repoUrl ? (
-                  <div className="mt-6 flex flex-wrap gap-2">
+                  <div className="mt-8 flex flex-wrap gap-2">
                     {project.url ? (
                       <Button asChild variant="outline" size="sm" className="rounded-full">
                         <a href={project.url} target="_blank" rel="noopener noreferrer">
@@ -171,23 +167,18 @@ function ProjectView({ project, refetch }: { project: PublicProject; refetch: ()
           </Section>
 
           {project.milestones.length ? (
-            <Section title="Milestones" hint="Cold Kudos are released to the creator as each one is delivered.">
-              <ol className="relative space-y-4 border-l border-border pl-6">
+            <Section title="Milestones" hint="Backing is released to the creator as each one is delivered.">
+              <ol className="relative max-w-2xl space-y-6 border-l border-border pl-7">
                 {project.milestones.map((m) => {
                   const delivered = Boolean(m.deliveredAt);
                   return (
                     <li key={m.id} className="relative">
-                      <span
-                        className={cn(
-                          "absolute -left-[1.95rem] top-0.5 flex size-5 items-center justify-center rounded-full bg-background",
-                          delivered ? "text-cold" : "text-muted-foreground",
-                        )}
-                      >
+                      <span className={cn("absolute -left-[2.2rem] top-0.5 flex size-5 items-center justify-center rounded-full bg-background", delivered ? "text-cold" : "text-muted-foreground")}>
                         {delivered ? <CheckCircle2Icon className="size-5" /> : <CircleDashedIcon className="size-5" />}
                       </span>
                       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                        <p className="font-semibold">{m.title}</p>
-                        <span className="text-xs font-medium text-cold tabular-nums">releases {m.releasePercent}%</span>
+                        <p className="font-medium">{m.title}</p>
+                        <span className="text-xs text-cold tabular-nums">releases {m.releasePercent}%</span>
                         <span className="text-xs text-muted-foreground">
                           {delivered
                             ? `Delivered ${timeAgo(m.deliveredAt!)}`
@@ -204,46 +195,41 @@ function ProjectView({ project, refetch }: { project: PublicProject; refetch: ()
             </Section>
           ) : null}
 
-          <Section title="Process log" hint="Dated notes from the creator. Watching the work get made is how you know a human made it.">
+          <Section title="Process" hint="Dated notes from the creator. Watching the work get made is how you know a person made it.">
             {project.updates.length ? (
-              <ol className="space-y-4">
+              <ol className="max-w-2xl space-y-8">
                 {project.updates.map((u) => (
-                  <li key={u.id} className="rounded-2xl border border-border bg-card p-4">
-                    <p className="flex items-center gap-2 text-[0.68rem] font-semibold uppercase tracking-wider text-muted-foreground">
-                      {u.kind === "milestone" ? (
-                        <FlagIcon className="size-3 text-cold" />
-                      ) : u.kind === "stage" ? (
-                        <SparklesIcon className="size-3 text-hot" />
-                      ) : (
-                        <PenLineIcon className="size-3" />
-                      )}
-                      {u.kind === "milestone" ? "Milestone delivered" : u.kind === "stage" ? "Stage change" : "Process"} ·{" "}
-                      {timeAgo(u.createdAt)}
+                  <li key={u.id}>
+                    <p className="flex items-center gap-2 text-xs text-muted-foreground">
+                      {u.kind === "milestone" ? <FlagIcon className="size-3 text-cold" /> : u.kind === "stage" ? <SparklesIcon className="size-3 text-hot" /> : <PenLineIcon className="size-3" />}
+                      {u.kind === "milestone" ? "Milestone delivered" : u.kind === "stage" ? "Stage change" : "Process note"} · {timeAgo(u.createdAt)}
                     </p>
-                    <p className="mt-2 whitespace-pre-line text-sm leading-7">{u.body}</p>
+                    <p className="mt-2 whitespace-pre-line font-serif text-lg leading-8">{u.body}</p>
                   </li>
                 ))}
               </ol>
             ) : (
-              <p className="text-sm text-muted-foreground">No updates yet.</p>
+              <p className="text-sm text-muted-foreground">No notes yet.</p>
             )}
           </Section>
 
+          <ContributorsSection projectId={project.id} creator={project.creator} isOwner={project.viewer.isOwner} />
+
           {project.openRoles.length ? (
-            <Section title="Open roles" hint="This project is looking for collaborators.">
-              <div className="grid gap-3 sm:grid-cols-2">
+            <Section title="Looking for" hint="Open roles on this project. Offer your skills and agree on credit and a share with the creator.">
+              <div className="grid gap-4 sm:grid-cols-2">
                 {project.openRoles.map((role) => (
-                  <div key={role.title} className="flex flex-col rounded-2xl border border-border bg-card p-4">
-                    <p className="font-semibold">{role.title}</p>
+                  <div key={role.title} className="flex flex-col rounded-3xl border border-border bg-card p-5">
+                    <p className="font-medium">{role.title}</p>
                     {role.description ? <p className="mt-1 text-sm leading-6 text-muted-foreground">{role.description}</p> : null}
                     {!project.viewer.isOwner ? (
-                      project.viewer.signedIn ? (
-                        <Button size="sm" variant="outline" className="mt-4 w-fit rounded-full" onClick={() => setRoleOpen(role.title)}>
-                          <HandIcon className="size-3.5" /> Raise your hand
+                      signedIn ? (
+                        <Button size="sm" variant="outline" className="mt-4 w-fit rounded-full" onClick={() => setContribute({ role: role.title })}>
+                          <HandIcon className="size-3.5" /> Offer to help
                         </Button>
                       ) : (
                         <Button asChild size="sm" variant="outline" className="mt-4 w-fit rounded-full">
-                          <Link href="/auth/login">Sign in to raise your hand</Link>
+                          <Link href="/auth/login">Sign in to offer help</Link>
                         </Button>
                       )
                     ) : null}
@@ -253,6 +239,8 @@ function ProjectView({ project, refetch }: { project: PublicProject; refetch: ()
             </Section>
           ) : null}
 
+          <LicensesSection projectId={project.id} isOwner={project.viewer.isOwner} signedIn={signedIn} />
+
           <Section title="Backers" hint="Backer numbers are permanent. Early believers backed while this was still an idea.">
             {project.backers.length ? (
               <ul className="flex flex-wrap gap-2">
@@ -260,10 +248,7 @@ function ProjectView({ project, refetch }: { project: PublicProject; refetch: ()
                   <li key={b.backerNumber}>
                     <Link
                       href={`/${b.backer.username ?? ""}`}
-                      className={cn(
-                        "flex items-center gap-2 rounded-full border py-1 pl-1 pr-3 text-xs transition-colors hover:bg-muted",
-                        b.earlyBeliever ? "border-cold/40 bg-cold-soft/60" : "border-border bg-card",
-                      )}
+                      className={cn("flex items-center gap-2 rounded-full border py-1 pl-1 pr-3 text-xs transition-colors hover:bg-muted", b.earlyBeliever ? "border-cold/40 bg-cold-soft/60" : "border-border bg-card")}
                     >
                       <Avatar className="size-6">
                         {b.backer.image ? <AvatarImage src={b.backer.image} alt="" className="object-cover" /> : null}
@@ -282,78 +267,80 @@ function ProjectView({ project, refetch }: { project: PublicProject; refetch: ()
           </Section>
 
           {kudosNotes.length ? (
-            <Section title="Kudos notes">
-              <ul className="grid gap-3 sm:grid-cols-2">
+            <Section title="Kind words">
+              <ul className="grid gap-4 sm:grid-cols-2">
                 {kudosNotes.map((k) => (
-                    <li key={k.id} className="rounded-2xl border border-border bg-card p-4">
-                      <p className="text-sm leading-6">“{k.message}”</p>
-                      <p className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
-                        <KudosAmount temp="hot" value={k.amount} size="xs" /> {k.giver?.name ?? "Someone"} · {timeAgo(k.createdAt)}
-                      </p>
-                    </li>
-                  ))}
+                  <li key={k.id} className="rounded-3xl border border-border bg-card p-5">
+                    <p className="font-serif text-lg leading-7">“{k.message}”</p>
+                    <p className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
+                      <KudosAmount temp="hot" value={k.amount} size="xs" /> {k.giver?.name ?? "Someone"} · {timeAgo(k.createdAt)}
+                    </p>
+                  </li>
+                ))}
               </ul>
             </Section>
           ) : null}
         </div>
 
-        {/* Kudos panel */}
         <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
-          <div className="rounded-3xl border border-border bg-card p-5 shadow-sm">
-            {isCancelled ? (
-              <p className="rounded-xl bg-destructive/10 p-3 text-sm text-destructive">
-                This project was cancelled. Every unreleased Cold Kudo went back to its backer.
-              </p>
-            ) : (
-              <StageTrack stage={project.stage} />
-            )}
+          <div className="rounded-3xl border border-border bg-card p-6 shadow-sm">
+            <p className="text-sm font-medium">{project.viewer.isOwner ? "How people support this" : "Support this work"}</p>
 
-            <div className="mt-5">
-              <BackingProgress cold={project.backing.cold} goal={project.backing.goal} released={project.backing.releasedPercent} />
-            </div>
-
-            <dl className="mt-5 grid grid-cols-3 gap-2 text-center">
-              <Stat label="backers" value={project.backing.backersCount} />
+            <dl className="mt-4 grid grid-cols-3 gap-2 text-center">
               <Stat label="Kudos" value={project.backing.kudosReceived} />
-              <Stat label="released" value={`${project.backing.releasedPercent}%`} />
+              <Stat label="backed" value={project.backing.cold} />
+              <Stat label="backers" value={project.backing.backersCount} />
             </dl>
 
-            <p className="mt-5 rounded-2xl bg-muted/60 p-3 text-xs leading-5 text-muted-foreground">
-              Backers share <span className="font-semibold text-foreground">{project.backing.backerSharePercent}%</span> of the Kudos this
-              project earns, up to <span className="font-semibold text-foreground">{project.backing.returnCapPercent / 100}×</span> what
-              they put in.
-            </p>
-
-            {!project.viewer.isOwner && !isCancelled ? (
-              <div className="mt-5 grid gap-2">
-                {project.backing.acceptsBacking ? (
-                  project.viewer.signedIn ? (
-                    <Button className="h-11 rounded-full bg-cold text-cold-foreground hover:bg-cold/90" onClick={() => setBackOpen(true)}>
-                      <KudosMark temp="cold" size="sm" className="bg-cold-foreground text-cold" />
-                      {project.viewer.backing ? "Back some more" : "Back this project"}
-                    </Button>
-                  ) : (
-                    <Button asChild className="h-11 rounded-full bg-cold text-cold-foreground hover:bg-cold/90">
-                      <Link href="/auth/signup">Sign up to back this project</Link>
-                    </Button>
-                  )
-                ) : null}
-                {project.viewer.signedIn ? (
-                  <Button variant="outline" className="h-11 rounded-full border-hot/40 text-hot hover:bg-hot-soft" onClick={() => setGiveOpen(true)}>
-                    <KudosMark temp="hot" size="sm" /> Give Kudos
-                  </Button>
-                ) : null}
-                {project.backing.stageWeightPercent ? (
-                  <p className="text-center text-[0.7rem] text-muted-foreground">
-                    Backing now counts {project.backing.stageWeightPercent / 100}× toward returns.
-                  </p>
-                ) : null}
+            {isCancelled ? (
+              <p className="mt-5 rounded-xl bg-destructive/10 p-3 text-sm text-destructive">
+                This project was cancelled. Every unreleased Cold Kudo went back to its backer.
+              </p>
+            ) : project.backing.goal > 0 && project.backing.acceptsBacking ? (
+              <div className="mt-5">
+                <BackingProgress cold={project.backing.cold} goal={project.backing.goal} released={project.backing.releasedPercent} />
               </div>
             ) : null}
 
-            {project.lastUpdateAt ? (
-              <p className="mt-4 text-center text-[0.7rem] text-muted-foreground">Last update {timeAgo(project.lastUpdateAt)}</p>
+            {!project.viewer.isOwner && !isCancelled ? (
+              <div className="mt-6 divide-y divide-border overflow-hidden rounded-2xl border border-border">
+                <SupportAction
+                  icon={HandHeartIcon}
+                  title="Appreciate"
+                  body="Give Kudos as a thank-you. They go to the creator."
+                  href={signedIn ? undefined : "/auth/signup"}
+                  onClick={() => setGiveOpen(true)}
+                />
+                {project.backing.acceptsBacking ? (
+                  <SupportAction
+                    icon={SproutIcon}
+                    title="Back"
+                    body={`Fund what's next. Backing now counts ${(project.backing.stageWeightPercent ?? 100) / 100}× and early backers share in success.`}
+                    href={signedIn ? undefined : "/auth/signup"}
+                    onClick={() => setBackOpen(true)}
+                  />
+                ) : null}
+                {canLicense ? (
+                  <SupportAction icon={FileBadgeIcon} title="License" body="Buy the right to use this work, with a verifiable certificate." href="#license" />
+                ) : null}
+                <SupportAction
+                  icon={HandshakeIcon}
+                  title="Contribute"
+                  body="Offer your skills for credit, and a share if you both agree."
+                  href={signedIn ? undefined : "/auth/signup"}
+                  onClick={() => setContribute({ role: "" })}
+                />
+              </div>
             ) : null}
+
+            <p className="mt-5 text-xs leading-5 text-muted-foreground">
+              Kudos and backing are support, not ownership. Backers share {project.backing.backerSharePercent}% of what this
+              project earns, up to {project.backing.returnCapPercent / 100}×.{" "}
+              <Link href="/how-it-works" className="underline underline-offset-2">
+                How it works
+              </Link>
+            </p>
+            {project.lastUpdateAt ? <p className="mt-3 text-xs text-muted-foreground">Last update {timeAgo(project.lastUpdateAt)}</p> : null}
           </div>
 
           {project.viewer.backing ? <YourBacking projectId={project.id} backing={project.viewer.backing} onChanged={refetch} /> : null}
@@ -384,17 +371,62 @@ function ProjectView({ project, refetch }: { project: PublicProject; refetch: ()
           hasMilestones: project.milestones.length > 0,
         }}
       />
-      <RaiseHandDialog projectId={project.id} role={roleOpen} onClose={() => setRoleOpen(null)} />
+      {contribute ? (
+        <ContributeDialog
+          key={contribute.role}
+          projectId={project.id}
+          defaultRole={contribute.role}
+          open
+          onOpenChange={(open) => !open && setContribute(null)}
+        />
+      ) : null}
     </div>
+  );
+}
+
+function SupportAction({
+  icon: Icon,
+  title,
+  body,
+  href,
+  onClick,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  title: string;
+  body: string;
+  href?: string;
+  onClick?: () => void;
+}) {
+  const content = (
+    <>
+      <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-muted transition-colors group-hover:bg-foreground group-hover:text-background">
+        <Icon className="size-4" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-medium">{title}</span>
+        <span className="block text-xs leading-5 text-muted-foreground">{body}</span>
+      </span>
+      <ChevronRightIcon className="size-4 shrink-0 text-muted-foreground" />
+    </>
+  );
+  const className = "group flex w-full items-center gap-3 bg-card p-3.5 text-left transition-colors hover:bg-muted/60";
+  return href ? (
+    <Link href={href} className={className}>
+      {content}
+    </Link>
+  ) : (
+    <button type="button" onClick={onClick} className={className}>
+      {content}
+    </button>
   );
 }
 
 function Section({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
   return (
     <section>
-      <h2 className="font-display text-2xl font-semibold tracking-tight">{title}</h2>
-      {hint ? <p className="mt-1 text-sm text-muted-foreground">{hint}</p> : null}
-      <div className="mt-5">{children}</div>
+      <h2 className="font-display text-4xl tracking-tight">{title}</h2>
+      {hint ? <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">{hint}</p> : null}
+      <div className="mt-6">{children}</div>
     </section>
   );
 }
@@ -505,61 +537,6 @@ function LockedStory({ project, onUnlocked }: { project: Extract<PublicProject, 
       </div>
       {error ? <p className="mt-2 text-xs text-destructive">{error.message}</p> : null}
     </div>
-  );
-}
-
-function RaiseHandDialog({ projectId, role, onClose }: { projectId: string; role: string | null; onClose: () => void }) {
-  const [message, setMessage] = useState("");
-  const raise = trpc.projects.raiseHand.useMutation();
-  const done = raise.isSuccess;
-  return (
-    <Dialog
-      open={role !== null}
-      onOpenChange={(open) => {
-        if (!open) {
-          onClose();
-          raise.reset();
-          setMessage("");
-        }
-      }}
-    >
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="font-display text-xl">Raise your hand</DialogTitle>
-          <DialogDescription>For: {role}. Tell the creator what you&apos;d bring and link to your work.</DialogDescription>
-        </DialogHeader>
-        {done ? (
-          <p className="rounded-xl bg-muted p-4 text-sm">
-            {raise.data?.delivered
-              ? "Sent to the creator's inbox. They'll reply by email."
-              : "This creator hasn't set up an inbox yet, so the message couldn't be delivered. Try following them instead."}
-          </p>
-        ) : (
-          <textarea
-            rows={5}
-            maxLength={1000}
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            placeholder="Hi! I'm an illustrator working in ink…"
-            className="w-full resize-none rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring/30"
-          />
-        )}
-        {raise.error ? <p className="text-xs text-destructive">{raise.error.message}</p> : null}
-        <DialogFooter>
-          {done ? (
-            <Button onClick={onClose}>Done</Button>
-          ) : (
-            <Button
-              disabled={!message.trim() || raise.isPending}
-              onClick={() => role && raise.mutate({ projectId, role, message: message.trim() })}
-            >
-              {raise.isPending ? <Loader2Icon className="size-4 animate-spin" /> : <HandIcon className="size-4" />}
-              Send
-            </Button>
-          )}
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
   );
 }
 

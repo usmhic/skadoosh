@@ -192,7 +192,10 @@ async function rankedFeed(mode: Exclude<DiscoverMode, "following">, medium: Medi
     default: {
       const score = (item: DiscoverItem) => {
         const fresh = 10 / (1 + ageDays(item.kind === "project" ? item.updatedAt : item.createdAt) / 7);
-        const interest = interests.length && item.tags.some((t) => interests.includes(t.toLowerCase())) ? 3 : 0;
+        const interest =
+          interests.length && (interests.includes(item.medium) || item.tags.some((t) => interests.includes(t.toLowerCase())))
+            ? 3
+            : 0;
         return item.momentum * 2 + fresh + interest;
       };
       return items.sort((a, b) => score(b) - score(a));
