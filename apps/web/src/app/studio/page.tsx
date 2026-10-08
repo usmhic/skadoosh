@@ -4,6 +4,9 @@ import Link from "next/link";
 import { useSession } from "@/lib/auth";
 import { trpc } from "@/lib/trpc/provider";
 import { CreateContentMenu } from "@/components/studio/create-content-menu";
+import { LicensesSold, StudioInbox } from "@/components/studio/studio-inbox";
+import { KudosMark } from "@/components/kudos/kudos-ui";
+import { mediumLabel } from "@/lib/mediums";
 import { StudioHero, StudioMain, StudioSectionSkeleton } from "@/components/studio/studio-page-shell";
 import { Button } from "@skaddosh/ui/components/ui/button";
 import { Badge } from "@skaddosh/ui/components/ui/badge";
@@ -137,7 +140,7 @@ export default function StudioPage() {
     <div className="min-h-full">
       <StudioHero
         title={session?.user.name ? `${session.user.name}'s Studio` : "Studio"}
-        description="Write, build, and shoot — your full creative space."
+        description="Make things, show the process, and keep track of who helped."
         actions={<CreateContentMenu buttonLabel="New" />}
       />
 
@@ -155,11 +158,7 @@ export default function StudioPage() {
             label="projects live"
           />
           <Stat
-            icon={
-              <span className="inline-flex size-4 items-center justify-center rounded-full border border-muted-foreground font-display text-[0.6rem] font-semibold italic leading-none text-muted-foreground">
-                K
-              </span>
-            }
+            icon={<KudosMark size="xs" />}
             value={totalKudos}
             label="kudos"
           />
@@ -169,6 +168,8 @@ export default function StudioPage() {
             label="drafts"
           />
         </div>
+
+        <StudioInbox />
 
         {/* Three content sections */}
         <div className="space-y-4">
@@ -217,7 +218,7 @@ export default function StudioPage() {
                       href={`/studio/projects/${p.id}`}
                       accent={p.accentColor}
                       title={p.title || "Untitled project"}
-                      meta={p.tags.join(", ") || "No tags"}
+                      meta={[mediumLabel(p.medium), ...p.tags.slice(0, 3)].join(" · ")}
                       badge={{ label: p.status === "published" ? "Published" : "Draft", published: p.status === "published" }}
                     />
                   </div>
@@ -244,6 +245,8 @@ export default function StudioPage() {
                   </div>
                 ))}
               </Section>
+
+              <LicensesSold />
             </>
           )}
         </div>

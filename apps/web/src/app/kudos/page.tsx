@@ -6,9 +6,10 @@ import { useSession } from "@/lib/auth";
 import { trpc } from "@/lib/trpc/provider";
 import { Button } from "@skaddosh/ui/components/ui/button";
 import { cn } from "@skaddosh/ui/lib/utils";
-import { CreditCardIcon, GiftIcon, Loader2Icon } from "lucide-react";
+import { CreditCardIcon, FileBadgeIcon, GiftIcon, Loader2Icon } from "lucide-react";
 import { KUDOS } from "@skaddosh/api/kudos";
 import { KudosFlow } from "@/components/kudos/kudos-flow";
+import { OnchainPanel } from "@/components/kudos/onchain-panel";
 import { KudosAmount, KudosMark, StageBadge, timeAgo } from "@/components/kudos/kudos-ui";
 
 const LEDGER_LABEL: Record<string, string> = {
@@ -25,6 +26,12 @@ const LEDGER_LABEL: Record<string, string> = {
   unlock_spend: "Unlocked work",
   unlock_earn: "Someone unlocked your work",
   comment: "Comment",
+  license_spend: "Bought a licence",
+  license_earn: "Licence sold",
+  contributor_share: "Contributor share",
+  export_onchain: "Sent to your wallet",
+  export_refund: "Wallet transfer refunded",
+  import_onchain: "Brought back from your wallet",
 };
 
 export default function KudosPage() {
@@ -192,6 +199,10 @@ function Wallet() {
         )}
       </section>
 
+      <LicensesOwned />
+
+      <OnchainPanel />
+
       <section>
         <h2 className="font-display text-2xl font-semibold tracking-tight">History</h2>
         <p className="mt-1 text-sm text-muted-foreground">Every Kudo that moved, and why.</p>
@@ -294,6 +305,8 @@ function HowItWorks() {
     ["Release", "Cold Kudos reach the creator as milestones are delivered"],
     ["Return", `Backers share up to ${KUDOS.BACKER_SHARE_MAX_PERCENT}% of a project's Kudos, capped at ${KUDOS.RETURN_CAP_MIN_PERCENT / 100}–${KUDOS.RETURN_CAP_MAX_PERCENT / 100}× what they put in`],
     ["Thaw", "Withdraw within 48 hours, or get everything unreleased back if a project is cancelled"],
+    ["License", `Buy permission to use a work; the creator gets it all minus a ${KUDOS.LICENSE_PLATFORM_FEE_BPS / 100}% fee`],
+    ["Contribute", `Agreed shares of a project's income, up to ${KUDOS.MAX_CONTRIBUTOR_SPLIT_BPS / 100}% across all contributors`],
   ];
   return (
     <section id="how" className="mt-16 scroll-mt-24 border-t border-border pt-12">
@@ -301,8 +314,10 @@ function HowItWorks() {
         <div>
           <h2 className="font-display text-3xl font-semibold tracking-tight">How Kudos work</h2>
           <p className="mt-3 text-sm leading-7 text-muted-foreground">
-            Kudos are a community currency, not an investment. They only exist on skaddosh, they can&apos;t be traded or cashed out
-            by supporters, and returns are a capped thank-you paid in Kudos. Nobody can pay to get to the top of Discover.
+            Kudos are a community currency, not an investment. Supporters can&apos;t cash them out, returns are a capped thank-you
+            paid in Kudos, and giving Kudos never buys a share of anyone&apos;s work. Nobody can pay to get to the top of Explore.
+            If you like, you can keep Kudos in your own wallet as a token on Base, but they still only move between skaddosh
+            members.
           </p>
           <dl className="mt-6 divide-y divide-border rounded-2xl border border-border bg-card">
             {rules.map(([term, body]) => (
@@ -315,6 +330,34 @@ function HowItWorks() {
         </div>
         <KudosFlow />
       </div>
+    </section>
+  );
+}
+
+function LicensesOwned() {
+  const licenses = trpc.licenses.mine.useQuery();
+  if (!licenses.data?.length) return null;
+  return (
+    <section>
+      <h2 className="font-display text-2xl font-semibold tracking-tight">Licences you hold</h2>
+      <p className="mt-1 text-sm text-muted-foreground">Each one has a certificate anyone can check.</p>
+      <ul className="mt-5 divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">
+        {licenses.data.map((l) => (
+          <li key={l.certificateCode}>
+            <Link href={`/licenses/${l.certificateCode}`} className="flex items-center gap-3 px-4 py-3 text-sm hover:bg-muted/50">
+              <FileBadgeIcon className="size-4 text-muted-foreground" />
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-medium">{l.projectTitle}</p>
+                <p className="text-xs capitalize text-muted-foreground">
+                  {l.tier} · by {l.creatorName} · {timeAgo(l.createdAt)}
+                  {l.status !== "active" ? ` · ${l.status}` : ""}
+                </p>
+              </div>
+              <span className="font-mono text-xs text-muted-foreground">{l.certificateCode}</span>
+            </Link>
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }

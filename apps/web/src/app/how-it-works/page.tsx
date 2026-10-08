@@ -60,7 +60,7 @@ export default function HowItWorksPage() {
 
       <div className="mt-14 grid gap-5 md:grid-cols-2">
         {WAYS.map(({ icon: Icon, title, temp, what, get, isnt }) => (
-          <section key={title} className="flex flex-col rounded-3xl border border-border bg-card p-7">
+          <section key={title} id={title.toLowerCase()} className="flex scroll-mt-24 flex-col rounded-3xl border border-border bg-card p-7">
             <div className="flex items-center gap-3">
               <span className="flex size-10 items-center justify-center rounded-2xl bg-muted">
                 <Icon className="size-5" />
