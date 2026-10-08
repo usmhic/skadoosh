@@ -28,7 +28,7 @@
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "react-i18next": "15.7.4",
-    "superjson": "1.13.3"
+    "superjson": "2.2.6"
   },
   "devDependencies": {
     "@skaddosh/typescript-config": "workspace:*",
