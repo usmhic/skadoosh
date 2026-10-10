@@ -46,6 +46,7 @@ delete envVars.NODE_ENV;
 
 // Merge with existing process.env (existing env vars take precedence)
 const childEnv = { ...envVars, ...process.env };
+childEnv.NEXT_IGNORE_INCORRECT_LOCKFILE ??= "1";
 
 // Get command and arguments
 const [, , ...args] = process.argv;

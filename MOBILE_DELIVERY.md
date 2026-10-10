@@ -1,14 +1,14 @@
 # Mobile delivery — Skadoosh
 
 How the skaddosh app gets from a branch to a device. Four independent pipelines,
-one per branch-and-platform combination.
+one per delivery target and platform; all work happens on `dev`.
 
 | Branch | Platform | Workflow | Destination |
 | --- | --- | --- | --- |
 | `dev` | Android | `mobile-android-dev.yml` | **Firebase App Distribution** (testers' *App Tester* app) |
 | `dev` | iOS | `mobile-ios-dev.yml` | Firebase App Distribution — **configured, manual-only** (see [iOS on dev](#ios-on-dev)) |
-| `main` | Android | `mobile-android-release.yml` | **Google Play Console** |
-| `main` | iOS | `mobile-ios-release.yml` | **App Store Connect** |
+| `dev` (manual) | Android | `mobile-android-release.yml` | **Google Play Console** |
+| `dev` (manual) | iOS | `mobile-ios-release.yml` | **App Store Connect** |
 
 Android and iOS are **separate workflow files** on purpose. A failing iOS build
 cannot block an Android release, and vice versa — they share no job, no runner,
@@ -36,10 +36,9 @@ Pushing to `dev` with changes under `apps/mobile/` runs `mobile-android-dev.yml`
    message as release notes; testers in `FIREBASE_TESTER_GROUPS` are notified.
 5. The APK is also kept as a workflow artifact for 30 days.
 
-### `main` → stores
+### Manual release from `dev` → stores
 
-Pushing to `main` with changes under `apps/mobile/` runs both release workflows
-independently:
+Run each store workflow manually from `dev` using **Actions → Run workflow**:
 
 - **Android** builds a signed **AAB** and uploads it to Play Console.
 - **iOS** builds a signed **App Store IPA** and uploads it to App Store Connect.

@@ -30,13 +30,13 @@ const expoConfig: ExpoConfig = {
     versionCode: buildNumber,
     adaptiveIcon: {
       foregroundImage: "./assets/brand/adaptive-icon-foreground.png",
-      backgroundColor: "#918781",
+      backgroundColor: "#FAF7F2",
     },
   },
   splash: {
-    image: "./assets/brand/app-icon.png",
+    image: "./assets/brand/splash-icon.png",
     resizeMode: "contain",
-    backgroundColor: "#918781",
+    backgroundColor: "#FAF7F2",
   },
   extra: {
     eas: {

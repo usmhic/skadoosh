@@ -17,7 +17,7 @@ export function BrandMark({
     >
       <span className="relative flex size-7 shrink-0 items-center -mr-0.5 justify-center overflow-hidden">
         <img
-          src="/brand/logo.png"
+          src="/brand/mark.png"
           alt=""
           className="h-full w-full object-contain bg-transparent"
           aria-hidden="true"

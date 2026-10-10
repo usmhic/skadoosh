@@ -73,10 +73,11 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: "/brand/logo.png", type: "image/png" },
+      { url: "/brand/icon-32.png", sizes: "32x32", type: "image/png" },
+      { url: "/brand/icon-16.png", sizes: "16x16", type: "image/png" },
     ],
-    shortcut: "/brand/logo.png",
-    apple: "/brand/logo.png",
+    shortcut: "/brand/icon-32.png",
+    apple: "/brand/apple-touch-icon.png",
   },
   manifest: "/site.webmanifest",
   openGraph: {
@@ -89,7 +90,7 @@ export const metadata: Metadata = {
     url: "/",
     images: [
       {
-        url: "/brand/logo.png",
+        url: "/brand/social-card.png",
         width: 1200,
         height: 630,
         alt: "skaddosh",
@@ -100,7 +101,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "skaddosh - multilingual publishing and creator portfolios",
     description: "Read, publish, support, and discover creative work across four languages.",
-    images: ["/brand/logo.png"],
+    images: ["/brand/social-card.png"],
   },
   robots: {
     index: true,

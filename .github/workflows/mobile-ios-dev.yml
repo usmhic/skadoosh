@@ -19,7 +19,7 @@ on:
   # push:
   #   branches: [dev]
   #   paths:
-  #     - "mobile/**"
+  #     - "apps/mobile/**"
   #     - ".github/workflows/mobile-ios-dev.yml"
 
 concurrency:
@@ -31,6 +31,7 @@ permissions:
 
 jobs:
   distribute:
+    if: github.ref == 'refs/heads/dev'
     name: Build & distribute to testers
     runs-on: macos-14
     environment: development

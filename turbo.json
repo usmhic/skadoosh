@@ -19,22 +19,68 @@
     "PADDLE_API_KEY",
     "PADDLE_WEBHOOK_SECRET",
     "OPENAI_API_KEY",
-    "OPENAI_MODEL"
+    "OPENAI_MODEL",
+    "WEB_PORT",
+    "EXPO_PORT",
+    "PORT",
+    "EXPO_PUBLIC_API_URL",
+    "EXPO_PUBLIC_APP_SCHEME",
+    "MINIO_ENDPOINT",
+    "MINIO_ACCESS_KEY",
+    "MINIO_SECRET_KEY",
+    "MINIO_BUCKET",
+    "UPLOAD_MAX_SIZE_MB",
+    "RESEND_API_KEY",
+    "EMAIL_FROM"
   ],
   "tasks": {
     "build": {
-      "dependsOn": ["^build"],
-      "inputs":    ["$TURBO_DEFAULT$", ".env*"],
-      "outputs":   [".next/**", "!.next/cache/**", "dist/**"]
+      "dependsOn": [
+        "^build"
+      ],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        ".env*"
+      ],
+      "outputs": [
+        ".next/**",
+        "!.next/cache/**",
+        "dist/**"
+      ]
     },
-    "dev":        { "cache": false, "persistent": true },
-    "start":      { "cache": false, "persistent": true },
-    "lint":       { "dependsOn": ["^lint"] },
-    "test":       { "dependsOn": ["^test"] },
-    "db:generate":{ "cache": false },
-    "db:migrate": { "cache": false },
-    "db:push":    { "cache": false },
-    "db:seed":    { "cache": false },
-    "db:studio":  { "cache": false, "persistent": true }
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "start": {
+      "cache": false,
+      "persistent": true
+    },
+    "lint": {
+      "dependsOn": [
+        "^lint"
+      ]
+    },
+    "test": {
+      "dependsOn": [
+        "^test"
+      ]
+    },
+    "db:generate": {
+      "cache": false
+    },
+    "db:migrate": {
+      "cache": false
+    },
+    "db:push": {
+      "cache": false
+    },
+    "db:seed": {
+      "cache": false
+    },
+    "db:studio": {
+      "cache": false,
+      "persistent": true
+    }
   }
 }
