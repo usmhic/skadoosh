@@ -32,8 +32,8 @@
     "db:studio": "node scripts/with-root-env.mjs turbo db:studio"
   },
   "devDependencies": {
-    "prettier": "3.4.0",
-    "turbo": "2.3.0",
+    "prettier": "3.9.9",
+    "turbo": "2.11.7",
     "typescript": "5.9.3"
   },
   "packageManager": "pnpm@11.6.0"
