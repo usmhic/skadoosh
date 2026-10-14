@@ -8,7 +8,10 @@ import {
 import { View, Text, TouchableOpacity, Animated } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
-import { HomeScreen } from "@/screens/HomeScreen";
+import { ExploreScreen } from "@/screens/ExploreScreen";
+import { ProjectScreen } from "@/screens/ProjectScreen";
+import { KudosScreen } from "@/screens/KudosScreen";
+import { VerifyScreen } from "@/screens/VerifyScreen";
 import { ReadScreen } from "@/screens/ReadScreen";
 import { ProfileScreen } from "@/screens/ProfileScreen";
 import { LoginScreen } from "@/screens/LoginScreen";
@@ -29,6 +32,8 @@ export type RootStackParams = {
   Welcome: undefined;
   Tabs: undefined;
   Read: { workId: string };
+  Project: { projectId: string };
+  Verify: undefined;
   Login: undefined;
   Signup: { role?: string } | undefined;
   ForgotPassword: undefined;
@@ -44,7 +49,8 @@ export type RootStackParams = {
 };
 
 type TabsParams = {
-  Discover: undefined;
+  Explore: undefined;
+  Kudos: undefined;
   Studio: undefined;
   Profile: undefined;
 };
@@ -66,8 +72,9 @@ const SKADDOSH_NAV_THEME = {
 };
 
 const TAB_ICONS: Record<string, { active: string; inactive: string }> = {
+  Explore: { active: "◐", inactive: "◑" },
+  Kudos: { active: "Ⓚ", inactive: "Ⓚ" },
   Studio: { active: "\u2726", inactive: "\u2727" },
-  Discover: { active: "⌕", inactive: "⌕" },
   Profile: { active: "◎", inactive: "◎" },
 };
 
@@ -208,11 +215,8 @@ function Tabs() {
       tabBar={(props) => <TabBar {...props} />}
       screenOptions={{ headerShown: false }}
     >
-      <Tab.Screen
-        name="Discover"
-        component={HomeScreen as React.ComponentType<any>}
-        options={{ tabBarLabel: "Home" }}
-      />
+      <Tab.Screen name="Explore" component={ExploreScreen} options={{ tabBarLabel: "Explore" }} />
+      <Tab.Screen name="Kudos" component={KudosScreen} options={{ tabBarLabel: "Kudos" }} />
       <Tab.Screen
         name="Studio"
         component={StudioScreen as React.ComponentType<any>}
@@ -255,6 +259,8 @@ export function AppNavigator() {
           component={ReadScreen}
           options={{ headerShown: false }}
         />
+        <Stack.Screen name="Project" component={ProjectScreen} options={{ title: "" }} />
+        <Stack.Screen name="Verify" component={VerifyScreen} options={{ title: "Verify" }} />
         <Stack.Screen
           name="Login"
           component={LoginScreen}
