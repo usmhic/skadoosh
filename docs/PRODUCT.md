@@ -7,8 +7,22 @@ care about it early, and turn the good ideas into projects that last. Kudos are 
 together.
 
 This document covers the product: who it's for, the core loop, and how each surface works. The
-Kudos economy has its own spec in [KUDOS.md](./KUDOS.md). Engineering boundaries are in
-[ARCHITECTURE.md](../ARCHITECTURE.md).
+Kudos economy has its own spec in [KUDOS.md](./KUDOS.md), on-chain Kudos and attestations are in
+[CHAIN.md](./CHAIN.md), identity verification is in [IDENTITY.md](./IDENTITY.md), and the market,
+regulatory, and business-model research is in [RESEARCH.md](./RESEARCH.md). Engineering boundaries
+are in [ARCHITECTURE.md](../ARCHITECTURE.md).
+
+### Four ways to support, and what each one is not
+
+| | Appreciate | Back | License | Contribute |
+|---|---|---|---|---|
+| What you do | Give 1–5 Hot Kudos | Commit Hot Kudos as Cold to a project in its early days | Buy permission to use a work | Do part of the work, under an agreement both people accept |
+| What you get | The creator's thanks and a place in their supporters | A backer number, milestone-based release, and capped returns in Kudos | A licence certificate with plain terms | Credit, optionally a share of the project's Kudos income, and optionally co-ownership of your contribution |
+| What it isn't | Ownership of anything | Equity, debt, or a security | Ownership. The creator keeps the copyright | An investment. Supporters can't buy splits |
+
+Kudos never automatically grant ownership. Legally meaningful rights come only from a licence or a
+contributor agreement, each rendered from a versioned template, hashed, and (when enabled) attested
+on Base.
 
 ---
 
@@ -69,21 +83,23 @@ understandable currency.
 
 ### Navigation
 
-Four destinations, always visible:
+Few destinations, always visible:
 
-| | Destination | Purpose |
-|---|---|---|
-| ✦ | **Discover** (`/`) | The front door: modes, circles, mixed pieces and projects |
-| ◎ | **Circles** (`/circles`) | Craft-based communities |
-| K | **Kudos** (`/kudos`) | Your wallet: Hot, Cold, backings, returns, history |
-| ✎ | **Studio** (`/studio`) | Make things |
+| Destination | Purpose |
+|---|---|
+| **Explore** (`/`) | The gallery: every medium, filtered by chips, sorted by mode |
+| **How it works** (`/how-it-works`, signed out) | The four ways to support, verification, originality, and on-chain Kudos in plain words |
+| **Kudos** (`/kudos`) | Your wallet: Hot, Cold, backings, licences you hold, history, and optionally your own wallet |
+| **Studio** (`/studio`) | Make things, plus a "Needs you" inbox for verification and collaboration requests |
 
-The header wallet chip shows **Hot · Cold** at all times, because Kudos are the center of the
-product.
+On mobile web and in the app, the same destinations are a bottom tab bar. The header wallet chip
+shows **Hot · Cold**. New members go through `/welcome` (you, what you make, verify).
 
-### Discover
+### Explore
 
-Discover is one page with **modes** rather than one infinite feed:
+Explore is a masonry gallery of covers. Projects without a cover get a generated one, drawn from
+their medium and accent colour. **Medium chips** (Art, Design, Software, Music, Writing, Film, Games,
+Photography, Research) filter it, and **modes** sort it:
 
 | Mode | What it surfaces | Ranking |
 |---|---|---|
@@ -94,34 +110,39 @@ Discover is one page with **modes** rather than one infinite feed:
 | **Open collabs** | Projects with open roles | Newest first |
 | **New voices** | Creators with fewer than 10 supporters | Newest first |
 
-Cards for pieces and projects share one layout: cover or accent, title, creator, and a single
-Kudos line (`✺ 42 Kudos · ❄ 310 backing`). Cards show no follower counts.
+Tiles for pieces and projects share one layout: the cover, a stage badge, a thin backing bar while a
+project is seeking backers, then the title in the display serif, the creator with their Verified mark,
+the medium, and the Kudos count. Tiles show no follower counts. The old `/circles` URLs redirect to
+the matching medium.
 
 ### Project pages (`/projects/:id`)
 
 The project page is the most important page on the platform. Top to bottom:
 
-1. **Hero:** cover, title, one-line pitch, stage track (Idea → Making → Released → Sustaining).
-2. **Kudos panel:** Cold Kudos backed vs. goal, number of backers, the backer terms in plain
-   language ("Backers share 10% of the Kudos this project earns, up to 2× what they put in"), and
-   two actions: **Give Kudos** and **Back this project**.
-3. **Story:** the creator's description.
-4. **Milestones:** the plan, what each one releases, and which are delivered.
-5. **Process log:** dated updates from the creator. This is also where human authorship shows,
-   because people can watch the work get made.
-6. **Open roles:** collaboration asks, with a "Raise your hand" action.
-7. **Backers wall:** backer numbers (#1, #2, …) and an *Early believer* mark for anyone who backed
-   during *Idea*.
-8. **Made by humans:** the originality confirmation and AI-use disclosure.
+1. **Hero:** a large cover, the medium and stage, the title in the display serif, the creator with
+   their Verified mark.
+2. **Support card** (sticky on desktop): Cold Kudos backed vs. goal, backers, and four rows, one for
+   each way to support (Appreciate, Back, License, Contribute), each with one sentence on what it is.
+   Under them is the line "None of these makes you an owner of the work".
+3. **Story:** the creator's description, set in the reading serif.
+4. **Milestones** and the **process log**, which is also where human authorship shows.
+5. **People behind it:** the creator's share and each accepted contributor (role, split, co-owner,
+   the agreement, and its attestation). Pending proposals show who they're waiting on.
+6. **Looking for:** open roles, each with "Offer to help", which opens a proposal with role,
+   contribution, requested share, and co-ownership.
+7. **License this work:** the tiers on sale, what each allows and forbids, and a purchase dialog
+   showing the full terms before you agree.
+8. **Backers wall** with backer numbers and *Early believer* marks, and **Made by humans**.
 
 ### Creator profiles (`/:username`)
 
 A profile answers "who is this, and can I trust them?" in about five seconds:
 
-* Name, bio, location, **Follow**.
+* Name in the display serif, the Verified mark, bio, location, website, **Follow**.
 * **Reputation signals** (see below).
-* Tabs: **Work** (pieces), **Projects**, **Believes in** (projects they back), and **Portfolio**
-  (the existing portfolio builder for creators who want a full story page).
+* A gallery with tabs: **Work** (projects and pieces), **Contributes to** (projects they're
+  credited on, with their role), **Believes in** (projects they back), and **Collections**. A
+  **Portfolio** button links to the full portfolio page when there is one.
 
 ### Reputation: signals, not scores
 
@@ -135,25 +156,42 @@ Reputation is computed live from what happened. There is no single number to gam
 | **Early believer** | Projects this person backed during *Idea* that went on to ship | Rewards taste and turns supporters into curators |
 | **Process posts** | Updates published on their projects | Shows the work being made by a human |
 
-### Circles (`/circles`)
+### Mediums
 
-Circles are craft-based communities such as Short Fiction, Poetry, Essays & Ideas, Visual Art,
-Music & Sound, Games & Interactive, Film & Scripts, and Research & Archives. In the first version
-a circle is a curated set of tags and work types with its own Discover page. Later phases add
-membership, critique threads, monthly prompts, and circle-run backing rounds (see roadmap).
+Every project has one **medium**: art, design, software, music, writing, film, games, photography,
+research, or other. Mediums replaced the tag-based Circles. They're simpler to choose, they drive
+the Explore chips and "For you", and they set the generated cover. Community features that Circles
+promised (critique, prompts) can come back per medium later.
 
-### Collaboration
+### Collaboration and contributor splits
 
-Projects can list **open roles** ("Illustrator for 12 chapter plates", "Arabic → French
-translator"). Raising your hand sends a message to the creator's inbox. Later phases add accepted
-collaborators with credits on the project page and a share of returns.
+Projects list **open roles**. Anyone can **offer to help**, and the creator can **invite** someone by
+username. Both paths produce the same proposal: role, contribution, an optional split of the
+creator side of income (contributors share up to 90% in total), and optional co-ownership of the
+contribution. The proposal is only active once the other person accepts the exact agreement text,
+whose hash is recorded and attested. See [KUDOS.md § Contributor splits](./KUDOS.md#9-contributor-splits).
+
+### Licensing
+
+Creators can sell **Personal**, **Commercial**, and **Exclusive** licences, priced in Kudos. Terms
+come from versioned, plain-language templates. Buyers get a certificate at `/licenses/:code` that
+anyone can verify. It shows whether the terms are intact and links to the on-chain record. Selling an
+Exclusive licence closes the other commercial tiers.
+
+### Identity verification
+
+Creators verify once, with Veriff, before publishing, selling licences, or starting a revenue split.
+skaddosh keeps only the result and the issuing country, never documents or selfies. Readers and
+supporters never need to verify. Verified people get a small green mark. See [IDENTITY.md](./IDENTITY.md).
 
 ### Studio
 
-The studio's project editor gains a **Kudos & backing** section (stage, pitch, backing goal,
-backer share, return cap), a **milestones** editor, a **process log** composer, **open roles**, and
-the **Made by humans** disclosure. Publishing a project requires confirming the work is original
-and human-made.
+The studio's project editor has a **medium** picker, a **Kudos & backing** section (stage, pitch,
+backing goal, backer share, return cap), a **milestones** editor, a **process log** composer,
+**open roles**, **People behind it** (invite collaborators, accept offers), **Licensing** (tiers and
+prices), and the **Made by humans** disclosure. Publishing a project requires a verified identity and
+confirming the work is original and human-made. The Studio home starts with a **Needs you** list
+(verification, offers, and invitations) and ends with **Licences sold**.
 
 ## 5. Originality and AI
 
@@ -170,13 +208,20 @@ skaddosh is for original human creative work.
     it.
   * Platform AI features (translation, summaries) are labelled as platform features. They never
     change the creator's original.
-* **Enforcement (later phase):** community reports, with circle stewards reviewing them;
+* **Enforcement (later phase):** community reports, with stewards reviewing them;
   confirmed violations remove the work and freeze its Kudos.
 
 ## 6. Visual and interaction language
 
-* **Paper and ink.** A warm paper background, deep ink text, Fraunces for display and Manrope
-  for UI. It should read like a creative studio, not a trading dashboard.
+* **Paper and ink.** A warm paper background, deep ink text, and ink as the primary colour.
+  **Instrument Serif** for display, **Newsreader** for long-form reading, **Geist** for UI, and
+  Geist Mono for codes and hashes. It should read like a gallery, not a trading dashboard.
+* **The mark.** An ink tile with a paper four-point spark and a small ember dot: a moment of
+  appreciation landing on a piece of work. The wordmark is set in the display serif.
+* **The work comes first.** Covers are big, chrome is quiet, and actions sit in one support card
+  rather than being scattered as buttons.
+* **No crypto jargon.** The interface says "your own wallet" and "Send to wallet", and never shows
+  token names, gas, or chain IDs. On-chain records are offered as "On record ↗" links.
 * **Two temperatures.** Hot Kudos are **ember** (warm orange) and Cold Kudos are **glacier**
   (cool blue). Those are the only two "money" colours, and they're always paired with their marks
   ✺ and ❄.
@@ -190,9 +235,9 @@ skaddosh is for original human creative work.
 
 | Phase | Scope | Status |
 |---|---|---|
-| **1: Foundations** | Hot/Cold ledger, giving to pieces and projects, backing with stage weights, milestones and releases, returns with caps, cancel-and-thaw, 48-hour change of heart, weekly allowance, project pages, process log, open roles, follows, reputation signals, Discover modes, tag-based Circles, wallet page, AI disclosure | **This change** |
-| 2: Circles | Membership, critique threads, monthly prompts, circle stewards, circle-run backing rounds | Next |
-| 3: Collaboration | Accepted collaborators, credits, collaborator share of returns, project↔piece linking | Next |
+| **1: Foundations** | Hot/Cold ledger, giving to pieces and projects, backing with stage weights, milestones and releases, returns with caps, cancel-and-thaw, 48-hour change of heart, weekly allowance, project pages, process log, open roles, follows, reputation signals, Discover modes, wallet page, AI disclosure | Done |
+| **2: Ownership** | Gallery and mediums, new identity, contributor agreements and splits, licences and certificates, identity verification, Kudos as an ERC-20 on Base, CreativeRegistry attestations, mobile Explore, Project, Kudos, and Verify | **This change** |
+| 3: Community | Critique threads and monthly prompts per medium, stewards, project↔piece linking | Next |
 | 4: Trust | Automatic thaw for dormant projects (no update in 90 days), reports and moderation, weighting new accounts' Kudos lower in reputation | Planned |
 | 5: Sustainability | Creator payouts (KYC, region rules, legal review), memberships for released projects, mobile parity | Planned |
 

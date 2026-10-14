@@ -4,11 +4,12 @@
 
 ### Original work finds its first believers here.
 
-**A creator portfolio and community platform for original, human-made work.**
-Creators share pieces and open projects while they're still ideas. Supporters
-give **Hot Kudos**, back projects early with **Cold Kudos**, and share in what
-those projects go on to earn. No paid boosts, no slop. Just people making
-things and the people who believed in them first.
+**A gallery for original, human-made work, and the people who help it happen.**
+Verified creators show art, design, software, music, writing, and more. Supporters
+appreciate with **Hot Kudos**, back projects early with **Cold Kudos**, buy clear
+**licences**, or **contribute** under agreements that share credit and income.
+Kudos never quietly turn into ownership. Every right is spelled out, hashed, and
+optionally on record on Base.
 
 <br />
 
@@ -36,7 +37,7 @@ things and the people who believed in them first.
 
 | Where | Link | What you'll see |
 |---|---|---|
-| 📚 **Discover** | **[skadoosh.osas.cloud](https://skadoosh.osas.cloud)** | Discovery modes, circles, projects, profiles, and Kudos |
+| 🖼 **Explore** | **[skadoosh.osas.cloud](https://skadoosh.osas.cloud)** | The gallery by medium, project pages, licences, contributors, and Kudos |
 | 🖋 **Studio** | **[skadoosh.osas.cloud/studio](https://skadoosh.osas.cloud/studio)** | The creator surface — works, drafts, publishing controls |
 | 🎨 **Portfolio** | [skadoosh.osas.cloud](https://skadoosh.osas.cloud) | Public creator pages, projects, contact, and analytics |
 
@@ -55,14 +56,18 @@ intentional; just be aware which one a given URL needs. See
 
 | | Surface | Highlights |
 |---|---|---|
-| ✦ | **Discover** | Modes (For you, Following, Rising, Seeking backers, Open collabs, New voices) and craft Circles |
-| 🧭 | **Projects** | Public project pages with stages, milestones, a process log, open roles, backers, and an AI-use disclosure |
+| 🖼 | **Explore** | A masonry gallery filtered by medium, with modes (For you, Following, Rising, Seeking backers, Open to collaborators, New voices) |
+| 🧭 | **Projects** | Project pages with stages, milestones, a process log, open roles, backers, contributors, licences, and an AI-use disclosure |
+| 📜 | **Licensing** | Personal, Commercial, and Exclusive licences with plain terms and verifiable certificates |
+| 🤝 | **Contributors** | Two-sided agreements with credit, optional income splits, and co-ownership, all hashed and attested |
+| ✅ | **Verification** | Veriff identity checks for creators. Only the result and country are kept, never documents |
+| ⛓ | **On-chain (optional)** | Kudos as a closed-loop ERC-20 on Base, and a hash-only `CreativeRegistry` for works, credits, and licences |
 | K | **Kudos** | Hot Kudos to give, Cold Kudos to back projects, milestone releases, capped returns, and a full wallet history |
 | 🏅 | **Reputation** | Signals you can check (backed by, delivered, supports, early believer) instead of follower counts |
 | 📚 | **Reader** | Reading experience, translations, and confidential unlocks |
 | 🖋 | **Creator** | Studio, pieces, projects, drafts, and publishing controls |
 | 🎨 | **Portfolio** | Public pages, projects, contact forms, analytics, premium features |
-| 📱 | **Mobile** | Expo app for read, discover, and studio workflows over the same tRPC API |
+| 📱 | **Mobile** | Expo app with Explore, project pages (give Kudos, licence, see contributors), Kudos, Verify, read, and studio |
 | 🔎 | **AI search** | OpenAI-backed discovery across published works |
 | 🌍 | **i18n** | Shared i18next localization across web and mobile |
 
@@ -162,7 +167,10 @@ backend service. Full breakdown in [ARCHITECTURE.md](./ARCHITECTURE.md).
 Copy [`.env.example`](./.env.example) to `.env` and fill values locally; the tracked template is
 intentionally empty. Native development requires `DATABASE_URL` and `BETTER_AUTH_SECRET`. The
 Compose stack also requires `POSTGRES_PASSWORD`, `MINIO_ACCESS_KEY`, and `MINIO_SECRET_KEY`.
-Paddle, OpenAI, Resend, and OAuth remain optional. See
+Paddle, OpenAI, Resend, OAuth, identity verification (`IDENTITY_PROVIDER`, `VERIFF_*`), and
+on-chain Kudos (`CHAIN_*`, `KUDOS_TOKEN_ADDRESS`, `CREATIVE_REGISTRY_ADDRESS`, `CRON_SECRET`)
+remain optional. Each feature switches itself off when its variables are missing. See
+[docs/IDENTITY.md](./docs/IDENTITY.md), [docs/CHAIN.md](./docs/CHAIN.md), and
 [CONTRIBUTING.md](./CONTRIBUTING.md#getting-started) for details.
 
 ⚠️ The install hook prepares the database only when `.env` already exists. On a fresh clone,
@@ -204,6 +212,8 @@ address when testing on a physical device. See [apps/mobile/](./apps/mobile).
 | `mobile-android-release.yml` | push to `main`, manual dispatch | signed AAB → Google Play Console |
 | `mobile-ios-release.yml` | push to `main`, manual dispatch | signed IPA → App Store Connect |
 | `release.yml` | push of tag `v*.*.*` | creates a GitHub Release with auto-generated notes |
+| `contracts-ci.yml` | changes under `packages/contracts` | forge fmt check, build, fuzz tests, ABI drift check, Slither |
+| `contracts-deploy.yml` | manual dispatch, or push to `dev` touching contract sources | idempotent CREATE2 deploy to Base Sepolia or Base, behind environment approval; skips until secrets exist |
 
 The image is published to `ghcr.io/usmhic/skadoosh`, tagged `latest` (from `main`), by branch/tag
 ref, and `sha-<short-sha>`. Workflow concurrency is enabled, so older in-progress runs on the same
@@ -225,7 +235,10 @@ The full mobile signing and delivery setup is documented in
 | Doc | What's in it |
 |---|---|
 | [Product direction](./docs/PRODUCT.md) | Vision, the core loop, every surface, originality and AI, roadmap |
-| [Kudos](./docs/KUDOS.md) | Hot and Cold Kudos: rules, formulas, worked examples, guardrails |
+| [Kudos](./docs/KUDOS.md) | Hot and Cold Kudos: rules, formulas, licences, contributor splits, guardrails |
+| [Research](./docs/RESEARCH.md) | Market gaps, business model, network choice, ownership and licensing, identity providers |
+| [Kudos on Base](./docs/CHAIN.md) | Contracts, roles, queue, jurisdictions, deployment runbook |
+| [Identity](./docs/IDENTITY.md) | Verification flow, data minimisation, retention, accessibility |
 | [Contributing](./CONTRIBUTING.md) | Local setup, branch conventions, coding standards, release process |
 | [Architecture](./ARCHITECTURE.md) | How the pieces fit together, directory purposes |
 | [Engineering standards](./STANDARDS.md) | Shared conventions across every usmhic project |

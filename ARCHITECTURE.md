@@ -23,7 +23,14 @@ specific app or package, see its own README where one exists (e.g. `apps/web`, `
                     └─────────┘
 
 apps/mobile (Expo) ──── tRPC over HTTP ────▶ apps/web's API routes
+
+packages/api ── viem (operator key, queued) ──▶ Base: KudosToken + CreativeRegistry
+Veriff ── signed decision webhook ──▶ /api/identity/veriff
+scheduler ── POST /api/chain/reconcile (Bearer CRON_SECRET)
 ```
+
+The chain and the identity provider are optional. If they aren't configured, `chainConfig()` and
+`identityProvider()` report them as disabled, and the product works off-chain without verification gates.
 
 Unlike expenn and freesolo (which run a standalone backend service), skaddosh's "backend" is a
 set of shared, typed packages (`packages/api`, `packages/auth`, `packages/db`) imported directly
@@ -43,6 +50,10 @@ into the Docker image and has its own release path (EAS builds via `mobile-ci.ym
 | `packages/api/src/routers/` | tRPC router definitions, one file per domain area (works, projects, kudos, discover, creators, users, etc.) — the actual "backend" logic |
 | `packages/api/src/lib/kudos-economy.ts` | Pure Kudos rules (stage weights, releases, returns, caps, allowance). No I/O, unit-tested, also exported to clients as `@skaddosh/api/kudos` |
 | `packages/api/src/lib/kudos-ledger.ts` | Transactional helpers that move Kudos and write `kudos_ledger` rows. Every balance change goes through here |
+| `packages/api/src/lib/chain.ts`, `chain-ops.ts` | Chain configuration, viem clients, and the `chain_operation` queue (exports, imports, attestations). See [docs/CHAIN.md](docs/CHAIN.md) |
+| `packages/api/src/lib/identity.ts` | Identity provider (Veriff, plus a dev-only mock), webhook verification, and the `assertVerified` gate. See [docs/IDENTITY.md](docs/IDENTITY.md) |
+| `packages/api/src/lib/licensing.ts`, `packages/db/src/legal.ts` | Versioned licence and contributor-agreement templates, rendering, and hashing |
+| `packages/contracts/` | Foundry project: `KudosToken`, `CreativeRegistry`, tests, the idempotent CREATE2 deploy script, and the generated ABI (`@skaddosh/contracts/abi`). Not part of the Docker image's build, and its scripts are prefixed `contracts:` so Turbo doesn't run Forge |
 | `packages/auth/src/` | Better Auth server/client configuration, shared by web and mobile |
 | `packages/db/src/schema.ts` | Drizzle schema — the source of truth for the database shape |
 | `packages/db/drizzle/` | Generated SQL migrations |
@@ -104,10 +115,17 @@ migrations" means.
 - **Shared typed packages over a network boundary**: `packages/api`'s tRPC routers are consumed
   directly (in-process) by `apps/web` and over HTTP by `apps/mobile`, so both clients share exact
   input/output types with zero codegen.
-- **CI/CD is currently web + mobile only**: `web-ci.yml` builds and pushes the Docker image;
+- **CI/CD**: `web-ci.yml` builds and pushes the Docker image;
   deployment beyond that (e.g. notifying a host like Dokploy) is not yet wired into the workflow —
   the `DOKPLOY_WEBHOOK_URL` secret referenced in the README is aspirational until that step is
   added. Mobile ships independently via EAS, triggered by `mobile-v*` tags.
+  Contracts have their own `contracts-ci.yml` (format, build, fuzz tests, ABI drift, Slither) and an
+  environment-protected `contracts-deploy.yml` whose CREATE2 deploy script only deploys what's missing.
+- **The off-chain ledger stays authoritative**: on-chain Kudos exist only as mirrors of
+  `export_onchain` and `import_onchain` ledger rows, and every chain write goes through the idempotent
+  `chain_operation` queue. A lost transaction is reconciled or refunded, and is never minted twice.
+- **No identity documents, no PII on-chain**: verification stores a status and a country. The registry
+  stores hashes and HMAC account references, never names, emails, or content.
 - **Kudos are a ledger, not just a number**: `user.kudos_balance` is the Hot balance and
   `project_backing` holds Cold positions, but every movement also writes an append-only
   `kudos_ledger` row inside the same transaction. Debits are conditional updates

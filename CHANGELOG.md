@@ -9,6 +9,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Gallery and ownership release ([docs/RESEARCH.md](docs/RESEARCH.md)): appreciation, backing,
+  licensing, and contribution are now four distinct, clearly explained ways to support work, and
+  Kudos never grant ownership.
+- Licences: Personal, Commercial, and Exclusive tiers priced in Kudos, versioned plain-language
+  terms, a 10% platform fee, and public certificates at `/licenses/:code` that check their own hash.
+- Contributor agreements: invite or offer to contribute, with two-sided consent, credit, optional
+  income splits (up to 90% in total), and co-ownership flags. Agreement text is snapshotted and hashed.
+- Identity verification with Veriff (hosted flow, HMAC-verified webhook at `/api/identity/veriff`)
+  and a development-only mock. Only the status and issuing country are stored. Publishing,
+  selling licences, commercial purchases, and revenue splits require it when it's configured.
+- `packages/contracts`: a closed-loop `KudosToken` ERC-20 and a hash-only `CreativeRegistry` for
+  Base, with Foundry tests and fuzzing, Slither, an idempotent CREATE2 deploy script,
+  `contracts-ci.yml`, and an environment-protected `contracts-deploy.yml`.
+- An optional on-chain bridge: link a wallet, send Kudos to it or bring them back with a permit,
+  and attestations for works, contributions, and licences. Everything goes through an idempotent
+  `chain_operation` queue with a `POST /api/chain/reconcile` cron route, and is limited to
+  `CHAIN_ALLOWED_COUNTRIES`.
+- New visual identity (paper and ink, Instrument Serif, Newsreader, Geist, and a new mark), a
+  masonry Explore gallery with medium chips and generated covers, redesigned project pages with a
+  support card, gallery profiles with "Contributes to", `/how-it-works`, `/welcome` onboarding, and
+  Studio licensing, collaborator panels, and a "Needs you" inbox.
+- Mobile: Explore gallery, project pages (give Kudos, buy licences, contributors), Kudos, and
+  Verify screens, plus the new palette.
+- Migration `0002_creative_ownership` (verification, wallets, licences, contributors, chain
+  operations, mediums) with seed data, [docs/CHAIN.md](docs/CHAIN.md), and
+  [docs/IDENTITY.md](docs/IDENTITY.md).
+
+### Changed
+
+- Circles became **mediums**. `/circles` URLs redirect to the matching Explore filter.
+- Licence income and contributor shares go through `distributeProjectIncome` and `payCreatorSide`.
+
 - Creator-platform direction and Kudos economy: product spec (`docs/PRODUCT.md`) and Kudos spec
   (`docs/KUDOS.md`).
 - Hot/Cold Kudos: giving to pieces and projects (Kudos now reach the creator), backing projects

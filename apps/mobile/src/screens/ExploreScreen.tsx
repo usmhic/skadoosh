@@ -13,8 +13,8 @@ type Mode = "for-you" | "following" | "rising" | "backing" | "collab" | "new-voi
 const MODES: Array<{ value: Mode; label: string }> = [
   { value: "for-you", label: "For you" },
   { value: "rising", label: "Rising" },
-  { value: "backing", label: "Early days" },
-  { value: "collab", label: "Looking for help" },
+  { value: "backing", label: "Seeking backers" },
+  { value: "collab", label: "Open to collaborators" },
   { value: "new-voices", label: "New voices" },
   { value: "following", label: "Following" },
 ];

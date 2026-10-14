@@ -7,8 +7,8 @@ temperatures:
 |---|---|---|
 | One-liner | Kudos you can use | Kudos you've committed to a project |
 | Liquid? | Yes. Spend them anywhere on skaddosh | No. They stay with one project |
-| Where they come from | Signup grant, weekly allowance, purchases, Kudos you receive, returns, refunds | Only from backing: Hot becomes Cold when you back a project |
-| What they do | Give to work, unlock confidential work, comment, back projects | Fund the project milestone by milestone, earn returns, and build your reputation as an early believer |
+| Where they come from | Signup grant, weekly allowance, purchases, Kudos you receive, licence sales, contributor shares, returns, refunds | Only from backing: Hot becomes Cold when you back a project |
+| What they do | Give to work, unlock confidential work, buy licences, comment, back projects | Fund the project milestone by milestone, earn returns, and build your reputation as an early believer |
 | How they leave | You spend them | Released to the creator (as Hot) when milestones are delivered, or thawed back to you (as Hot) if the project is cancelled |
 
 Every movement is written to an append-only **ledger** (`kudos_ledger`), so every wallet balance
@@ -29,6 +29,9 @@ Change the code and this table together.
 | Return cap | 100–300% of what each backer put in (default 200%) |
 | Change of heart | Withdraw a backing within 48 hours, as long as none of it has been released |
 | Milestones | Up to 6 per project. Their release percentages add up to at most 100% |
+| Licence platform fee | 10% of the price, rounded down (`LICENSE_PLATFORM_FEE_BPS` = 1000) |
+| Contributor splits | Up to 90% in total across contributors (`MAX_CONTRIBUTOR_SPLIT_BPS` = 9000). The creator always keeps at least 10% |
+| Send to wallet | 1–1,000 Kudos per transfer (`EXPORT_MIN` / `EXPORT_MAX`) |
 
 ---
 
@@ -123,6 +126,57 @@ received 80.
 | Unlock confidential work | Creator-set (0–500) | Creator (projects: backers' share first) |
 | Comment | 3 | Burned (anti-spam) |
 | Back a project | 5–500 | Becomes Cold |
+| Buy a licence | Creator-set per tier | 10% platform fee, then backers' share, contributor splits, and the creator |
+
+### 8. Licences
+
+A creator can sell three standard licences for a project: **Personal**, **Commercial**, and
+**Exclusive**. They set the price of each in Kudos (`licenses.setOffers`), and selling requires a
+verified identity. When someone buys:
+
+1. The buyer is debited `price` Hot (`license_spend`).
+2. The platform keeps `floor(price × 10%)`. The fee leaves circulation and is recorded on the licence
+   (`platform_fee_kudos`).
+3. The rest goes through `distributeProjectIncome`. Backer returns come first, as for any project
+   income. The creator side is then split with contributors (`contributor_share`), and the creator
+   gets the remainder (`license_earn`). Licence income doesn't count toward "Kudos received" or
+   discovery, because a purchase isn't appreciation.
+4. The terms are rendered from a versioned template (`packages/db/src/legal.ts`), and their SHA-256
+   hash is stored on the licence and attested on Base when on-chain features are on. Each licence gets
+   a public certificate at `/licenses/SKD-XXX-XXXX`, which re-renders the terms and checks the hash.
+5. Selling an Exclusive licence closes the Commercial and Exclusive offers. Personal licences can
+   still be sold.
+
+A licence is permission to use the work. It never transfers ownership.
+
+### 9. Contributor splits
+
+A creator can invite a collaborator, or a collaborator can offer to help. Each proposal names a
+role, what was contributed, an optional split in basis points of the **creator side** of income, and
+an optional co-ownership flag. Nothing applies until the other person accepts the exact agreement
+text. That text is snapshotted and hashed when it's proposed. Rules:
+
+- Accepted splits total at most 90%, so the creator always keeps at least 10%.
+- A split above 0 needs the contributor to be identity-verified before it can be accepted.
+- Shares apply to future income only: Kudos given, unlocks, and licences. Each contributor gets
+  `floor(amount × bps / 10,000)`, and the creator keeps the remainder, including rounding.
+- Either person can end the arrangement. Past shares stay paid, and the end is attested.
+
+A split is a share of Kudos income on skaddosh. It isn't equity or a security, and supporters can't
+buy one.
+
+### 10. Kudos in your own wallet
+
+When on-chain features are enabled ([CHAIN.md](./CHAIN.md)), a verified member in an allowed
+country can link a wallet and:
+
+- **Send to wallet:** debit Hot (`export_onchain`) and mint the same amount of `KUDOS` on Base. If the
+  mint finally fails, the Kudos are refunded once (`export_refund`).
+- **Bring back:** sign a permit, the operator burns the tokens, and Hot is credited after the burn
+  confirms (`import_onchain`).
+
+The token keeps the closed loop. Holders can't transfer it between wallets, so it's a way to hold
+Kudos yourself, not to trade them.
 
 ---
 
@@ -140,17 +194,22 @@ Kudos feed reputation directly (see [PRODUCT.md § Reputation](./PRODUCT.md#repu
 
 These keep Kudos a community currency and not a financial product:
 
-1. **Closed loop.** Kudos can only be used on skaddosh. Supporters can't cash them out.
+1. **Closed loop.** Kudos can only be used on skaddosh. Supporters can't cash them out. Kudos held
+   as a token on Base can only come back to skaddosh, because wallet-to-wallet transfers are disabled
+   in the contract.
 2. **No transfers or trading.** Kudos only move through product actions (give, back, unlock,
-   comment). There is no peer-to-peer send, no order book, and no secondary market for backing
-   positions.
-3. **Capped returns, paid in Kudos.** Returns are a thank-you with a ceiling, not a claim on
+   comment, license). There is no peer-to-peer send, no order book, and no secondary market for
+   backing positions.
+3. **Kudos never buy ownership.** Giving and backing never grant rights in a work. Licences grant
+   permission to use it. Ownership and income shares come only from contributor agreements that both
+   people accept.
+4. **Capped returns, paid in Kudos.** Returns are a thank-you with a ceiling, not a claim on
    revenue or equity. They're only paid in Kudos.
-4. **No paid discovery.** Kudos can't buy placement. Discovery ranks by *distinct* supporters, so
+5. **No paid discovery.** Kudos can't buy placement. Discovery ranks by *distinct* supporters, so
    one big spender counts as one person.
-5. **Auditability.** Every balance change is a ledger row with a reason and a reference.
-6. **Atomic balances.** Debits are conditional updates (`balance >= amount`) inside a transaction,
+6. **Auditability.** Every balance change is a ledger row with a reason and a reference.
+7. **Atomic balances.** Debits are conditional updates (`balance >= amount`) inside a transaction,
    so concurrent requests can't overdraw.
-7. **Creator payouts (future)** need KYC, regional compliance, and **legal review before launch**.
+8. **Creator payouts (future)** need KYC, regional compliance, and **legal review before launch**.
    Turning Kudos earned by creators into money is a separate, regulated surface, and supporters
    never touch it.
