@@ -39,14 +39,16 @@ contract Deploy is Script {
 
         vm.startBroadcast();
         if (token.code.length == 0) {
-            KudosToken deployed = new KudosToken{salt: cfg.salt}(cfg.admin, cfg.operator, cfg.cap, cfg.adminDelay);
+            KudosToken deployed =
+                new KudosToken{salt: cfg.salt}(cfg.admin, cfg.operator, cfg.cap, cfg.adminDelay);
             require(address(deployed) == token, "Deploy: unexpected KudosToken address");
             console2.log("KudosToken deployed:", token);
         } else {
             console2.log("KudosToken already deployed:", token);
         }
         if (registry.code.length == 0) {
-            CreativeRegistry deployed = new CreativeRegistry{salt: cfg.salt}(cfg.admin, cfg.operator, cfg.adminDelay);
+            CreativeRegistry deployed =
+                new CreativeRegistry{salt: cfg.salt}(cfg.admin, cfg.operator, cfg.adminDelay);
             require(address(deployed) == registry, "Deploy: unexpected CreativeRegistry address");
             console2.log("CreativeRegistry deployed:", registry);
         } else {
@@ -70,8 +72,13 @@ contract Deploy is Script {
         require(cfg.adminDelay >= 1 days, "Deploy: admin transfer delay below 1 day");
     }
 
-    function _predict(bytes memory creationCode, bytes memory args, bytes32 salt) internal pure returns (address) {
-        return vm.computeCreate2Address(salt, keccak256(abi.encodePacked(creationCode, args)), CREATE2_FACTORY);
+    function _predict(bytes memory creationCode, bytes memory args, bytes32 salt)
+        internal
+        pure
+        returns (address)
+    {
+        return
+            vm.computeCreate2Address(salt, keccak256(abi.encodePacked(creationCode, args)), CREATE2_FACTORY);
     }
 
     /// @dev Fails loudly if an existing deployment doesn't match the expected configuration.
@@ -81,7 +88,9 @@ contract Deploy is Script {
         require(token.hasRole(token.REDEEMER_ROLE(), cfg.operator), "Verify: operator lacks REDEEMER_ROLE");
         require(token.cap() == cfg.cap, "Verify: cap mismatch");
         require(registry.defaultAdmin() == cfg.admin, "Verify: registry admin mismatch");
-        require(registry.hasRole(registry.REGISTRAR_ROLE(), cfg.operator), "Verify: operator lacks REGISTRAR_ROLE");
+        require(
+            registry.hasRole(registry.REGISTRAR_ROLE(), cfg.operator), "Verify: operator lacks REGISTRAR_ROLE"
+        );
         if (cfg.vault != address(0) && !token.hasRole(token.VAULT_ROLE(), cfg.vault)) {
             // VAULT_ROLE is granted by the admin multisig after deployment; remind the operator.
             console2.log("NOTE: admin must grant VAULT_ROLE to", cfg.vault);
@@ -96,7 +105,9 @@ contract Deploy is Script {
         vm.serializeAddress(key, "admin", cfg.admin);
         vm.serializeAddress(key, "operator", cfg.operator);
         string memory json = vm.serializeBytes32(key, "salt", cfg.salt);
-        vm.writeJson(json, string.concat(vm.projectRoot(), "/deployments/", vm.toString(block.chainid), ".json"));
+        vm.writeJson(
+            json, string.concat(vm.projectRoot(), "/deployments/", vm.toString(block.chainid), ".json")
+        );
 
         console2.log("Set these in the app environment:");
         console2.log(string.concat("CHAIN_ID=", vm.toString(block.chainid)));

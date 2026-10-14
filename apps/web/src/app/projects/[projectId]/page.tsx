@@ -282,7 +282,7 @@ function ProjectView({ project, refetch }: { project: PublicProject; refetch: ()
           ) : null}
         </div>
 
-        <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
+        <aside className="order-first space-y-4 lg:order-none lg:sticky lg:top-24 lg:self-start">
           <div className="rounded-3xl border border-border bg-card p-6 shadow-sm">
             <p className="text-sm font-medium">{project.viewer.isOwner ? "How people support this" : "Support this work"}</p>
 

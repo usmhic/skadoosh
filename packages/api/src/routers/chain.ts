@@ -74,7 +74,8 @@ export const chainRouter = router({
     return {
       enabled: true as const,
       chainId: config.chain.id,
-      chainName: config.chain.name,
+      // Plain names only: "Base" in production, never a tooling name like "Foundry".
+      chainName: config.chain.id === 31337 ? "a local test network" : config.chain.name,
       token: config.token,
       registry: config.registry,
       explorer: config.explorer,
