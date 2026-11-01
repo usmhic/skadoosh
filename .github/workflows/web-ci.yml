@@ -24,7 +24,7 @@ jobs:
     name: Type check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - run: node scripts/check-env.mjs
 
@@ -61,7 +61,7 @@ jobs:
     env:
       APP_URL: ${{ vars.NEXT_PUBLIC_APP_URL || 'https://skadoosh.osas.cloud' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: docker/setup-buildx-action@v3
 
@@ -134,7 +134,7 @@ jobs:
           - 5432:5432
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Generate ephemeral CI secret
         shell: bash
