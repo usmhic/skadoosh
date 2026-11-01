@@ -75,8 +75,8 @@ importers:
         specifier: ^55.0.17
         version: 55.0.17(expo@55.0.31)(react-native@0.83.10(@babel/core@7.29.7)(@types/react@19.2.10)(react@19.2.0))(react@19.2.0)
       expo-localization:
-        specifier: ^55.0.19
-        version: 55.0.19(expo@55.0.31)(react@19.2.0)
+        specifier: ^58.0.5
+        version: 58.0.5(expo@55.0.31)(react@19.2.0)
       expo-secure-store:
         specifier: ^55.0.18
         version: 55.0.18(expo@55.0.31)
@@ -1591,6 +1591,10 @@ packages:
     resolution: {integrity: sha512-9HnnIbzwTTdbwSjNLXTk0fPm9ZwMJ7c1/31tsni8HZ8Q62KzYCyspahH+V365vg5J6lr001DzNwBxVWSaYCQLg==}
     engines: {node: '>=20.12.0'}
 
+  '@expo/env@2.3.1':
+    resolution: {integrity: sha512-JvBdZa5OkTd+dGEtt3fLW9OF6RlIp9SNu9VyMSiWPV5szMDTSAYbX8Uj3cRvZcU1zzaRbqnTSsHk2AE8WXHfxQ==}
+    engines: {node: '>=20.12.0'}
+
   '@expo/fingerprint@0.16.8':
     resolution: {integrity: sha512-RaLOikl+alkvG9ZrBQFGi3kVXJdG5GQXY1H3V1ZFCwFyhFikwuBozVrl4KL7U+N0Tm8Bf1qDmpTEIx8JOyrQog==}
     hasBin: true
@@ -2422,6 +2426,7 @@ packages:
   '@smithy/core@3.24.7':
     resolution: {integrity: sha512-KoUi4M1f3BG6kzN1FnCwL7oyFptTbyBJKjR6yhSib+JHRdUmM1o+VwsFtJ66NZCkCzVfJMWRHJNo0R0jznp0Pg==}
     engines: {node: '>=18.0.0'}
+    deprecated: Deprecated due to a bug in custom logger data redaction. See https://github.com/aws/aws-sdk-js-v3/issues/8393.
 
   '@smithy/credential-provider-imds@4.3.9':
     resolution: {integrity: sha512-ZlfJ/4Fa3jYb+3eaohPfG9utX9HmdhFNcFtpoGAhUhdynAOmGXtmigbi7eEiONKM+ykHw8RwKuDEb85Lx7t7fA==}
@@ -3344,8 +3349,8 @@ packages:
       react: '*'
       react-native: '*'
 
-  expo-localization@55.0.19:
-    resolution: {integrity: sha512-rw8pcC4QL8HC3K8Vs5pdVCB+ayFkaVD0f+Ul+jHgM6W7XdzGtCzd0x7rI3M/9PzP1YpAgQ4jYZid/g+UKi9IIA==}
+  expo-localization@58.0.5:
+    resolution: {integrity: sha512-2wyZl/5wn95l38AAtdaUAq2VMJWbGbgQQDEuIEkkemmsA/BZ8gS21Nq+7I2X9hDfL5Z+4hlyLVdPtDIH0vvt1A==}
     peerDependencies:
       expo: '*'
       react: '*'
@@ -6161,6 +6166,15 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+  '@expo/env@2.3.1':
+    dependencies:
+      chalk: 4.1.2
+      debug: 4.4.3
+      getenv: 2.0.0
+    transitivePeerDependencies:
+      - supports-color
+    optional: true
+
   '@expo/fingerprint@0.16.8':
     dependencies:
       '@expo/env': 2.3.0
@@ -7915,7 +7929,7 @@ snapshots:
 
   expo-constants@56.0.18(expo@55.0.31)(react-native@0.83.10(@babel/core@7.29.7)(@types/react@19.2.10)(react@19.2.0)):
     dependencies:
-      '@expo/env': 2.3.0
+      '@expo/env': 2.3.1
       expo: 55.0.31(@babel/core@7.29.7)(@expo/dom-webview@55.0.6)(react-dom@19.2.0(react@19.2.0))(react-native@0.83.10(@babel/core@7.29.7)(@types/react@19.2.10)(react@19.2.0))(react@19.2.0)(typescript@5.9.3)
       react-native: 0.83.10(@babel/core@7.29.7)(@types/react@19.2.10)(react@19.2.0)
     transitivePeerDependencies:
@@ -7964,7 +7978,7 @@ snapshots:
       - supports-color
     optional: true
 
-  expo-localization@55.0.19(expo@55.0.31)(react@19.2.0):
+  expo-localization@58.0.5(expo@55.0.31)(react@19.2.0):
     dependencies:
       expo: 55.0.31(@babel/core@7.29.7)(@expo/dom-webview@55.0.6)(react-dom@19.2.0(react@19.2.0))(react-native@0.83.10(@babel/core@7.29.7)(@types/react@19.2.10)(react@19.2.0))(react@19.2.0)(typescript@5.9.3)
       react: 19.2.0
