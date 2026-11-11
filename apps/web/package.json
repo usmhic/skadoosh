@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "NEXT_IGNORE_INCORRECT_LOCKFILE=1 node ../../scripts/with-root-env.mjs next dev",
-    "build": "NEXT_IGNORE_INCORRECT_LOCKFILE=1 node ../../scripts/with-root-env.mjs next build",
-    "start": "NEXT_IGNORE_INCORRECT_LOCKFILE=1 node ../../scripts/with-root-env.mjs next start",
+    "dev": "node ../../scripts/with-root-env.mjs next dev",
+    "build": "node ../../scripts/with-root-env.mjs next build",
+    "start": "node ../../scripts/with-root-env.mjs next start",
     "lint": "node ../../scripts/with-root-env.mjs tsc --noEmit"
   },
   "dependencies": {

@@ -33,6 +33,9 @@ optionally on record on Base.
 
 ---
 
+Local setup, shared workspace ports, environment conventions, and `dev` workflows:
+[Local development](./LOCAL_DEVELOPMENT.md).
+
 ## 🎬 Try the demo
 
 | Where | Link | What you'll see |

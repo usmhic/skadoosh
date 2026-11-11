@@ -1,5 +1,5 @@
 ####################################################################
-# main branch → signed Android AAB → Google Play Console
+# Manual release from dev; production environment approvals still apply.
 #
 # Independent of the iOS release pipeline: if TestFlight upload fails,
 # the Play upload is unaffected, and vice versa.
@@ -7,11 +7,6 @@
 name: Release - Mobile Android (Play Store)
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "mobile/**"
-      - ".github/workflows/mobile-android-release.yml"
   workflow_dispatch:
 
 concurrency:
@@ -23,6 +18,7 @@ permissions:
 
 jobs:
   release:
+    if: github.ref == 'refs/heads/dev'
     name: Build & publish to Play Console
     runs-on: ubuntu-latest
     environment: production
