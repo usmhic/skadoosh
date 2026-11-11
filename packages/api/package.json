@@ -18,6 +18,10 @@
     "./kudos": {
       "import": "./src/lib/kudos-economy.ts",
       "require": "./src/lib/kudos-economy.ts"
+    },
+    "./trips": {
+      "import": "./src/lib/trip-planning.ts",
+      "require": "./src/lib/trip-planning.ts"
     }
   },
   "dependencies": {

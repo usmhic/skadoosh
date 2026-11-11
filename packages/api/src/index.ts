@@ -13,6 +13,7 @@ import { identityRouter } from "./routers/identity";
 import { chainRouter } from "./routers/chain";
 import { licensesRouter } from "./routers/licenses";
 import { contributorsRouter } from "./routers/contributors";
+import { tripsRouter } from "./routers/trips";
 
 export const appRouter = router({
   works:      worksRouter,
@@ -29,6 +30,7 @@ export const appRouter = router({
   chain:      chainRouter,
   licenses:   licensesRouter,
   contributors: contributorsRouter,
+  trips:      tripsRouter,
 });
 
 export type AppRouter = typeof appRouter;
