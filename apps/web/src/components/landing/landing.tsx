@@ -86,7 +86,7 @@ export function Landing() {
             <div className="grid grid-cols-6 grid-rows-6 gap-3 sm:gap-4" style={{ aspectRatio: "1 / 0.92" }}>
               {[0, 1, 2].map((i) => {
                 const item = featured[i];
-                const area = ["col-span-4 row-span-4", "col-span-2 row-span-3", "col-span-2 row-span-3"][i];
+                const area = ["col-span-4 row-span-4", "col-span-2 row-span-2", "col-span-2 row-span-2"][i];
                 return (
                   <Link
                     key={i}
@@ -119,7 +119,7 @@ export function Landing() {
               })}
               <Link
                 href={featuredTrip ? `/trips/${featuredTrip.id}` : "/trips"}
-                className="col-span-6 row-span-2 flex overflow-hidden rounded-3xl border border-border bg-card shadow-lift sm:col-span-4 sm:col-start-3"
+                className="col-span-6 row-span-2 flex overflow-hidden rounded-3xl border border-border bg-card shadow-lift"
               >
                 <RoutePreview
                   points={featuredTrip?.points ?? []}
