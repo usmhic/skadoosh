@@ -70,10 +70,10 @@ export default function TripsPage() {
         ) : null}
 
         <section>
-          <div className="flex items-end justify-between gap-4">
+          <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-1">
             <h2 className="font-display text-2xl">Journeys from the community</h2>
             {!session && !sessionPending ? (
-              <Link href="/auth/login" className="text-sm font-medium text-primary hover:underline">
+              <Link href="/auth/login" className="shrink-0 text-sm font-medium text-primary hover:underline">
                 Sign in to plan your own
               </Link>
             ) : null}

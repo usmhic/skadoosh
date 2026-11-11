@@ -145,7 +145,8 @@ export function TripMap({
   // Pan to the selected stop.
   useEffect(() => {
     const stop = stops.find((s) => s.id === selectedId);
-    if (stop && mapRef.current) mapRef.current.panTo([stop.lat, stop.lng], { animate: true });
+    const map = mapRef.current;
+    if (stop && map && !map.getBounds().pad(-0.1).contains([stop.lat, stop.lng])) map.panTo([stop.lat, stop.lng], { animate: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedId]);
 

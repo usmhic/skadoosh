@@ -81,6 +81,8 @@ export function formatDuration(seconds: number | null | undefined): string {
   if (minutes < 60) return `${Math.max(1, minutes)} min`;
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
+  // Past ten hours, minutes are noise: "73 h" reads better than "73 h 25 min".
+  if (h >= 10) return `${Math.round(minutes / 60)} h`;
   return m ? `${h} h ${m} min` : `${h} h`;
 }
 

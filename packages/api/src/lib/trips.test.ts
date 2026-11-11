@@ -43,6 +43,7 @@ test("formatting distances and durations", () => {
   assert.equal(formatDuration(45 * 60), "45 min");
   assert.equal(formatDuration(2 * 3600), "2 h");
   assert.equal(formatDuration(3 * 3600 + 25 * 60), "3 h 25 min");
+  assert.equal(formatDuration(73 * 3600 + 25 * 60), "73 h");
 });
 
 test("planDays counts the leg arriving at a stop toward that stop's day", () => {

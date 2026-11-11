@@ -334,7 +334,7 @@ export function TripPlanner({ tripId }: { tripId: string }) {
             </div>
 
             {/* Totals */}
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 gap-2 min-[420px]:grid-cols-4">
               <Stat label={trip.route ? "Distance" : "Straight line"} value={totalDistance != null ? `${trip.route ? "" : "~"}${formatDistance(totalDistance)}` : "–"} />
               <Stat label={`${TRAVEL_MODE_INFO[trip.mode].verb[0]!.toUpperCase()}${TRAVEL_MODE_INFO[trip.mode].verb.slice(1)} time`} value={trip.route ? formatDuration(trip.route.duration) : "–"} />
               <Stat label="Stops" value={String(trip.stops.length)} />
@@ -475,7 +475,7 @@ function Shell({ children }: { children: React.ReactNode }) {
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-2xl bg-muted/70 px-3 py-2.5">
-      <p className="truncate font-display text-lg leading-tight">{value}</p>
+      <p className="font-display text-lg leading-tight tabular-nums">{value}</p>
       <p className="truncate text-[0.7rem] text-muted-foreground">{label}</p>
     </div>
   );
