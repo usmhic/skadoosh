@@ -1,19 +1,20 @@
 "use client";
+
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { useTheme } from "next-themes";
 import { BrandMark } from "@/components/brand-mark";
 import { signOut, useSession } from "@/lib/auth";
 import { SITE_LANGS, useLang } from "@/lib/lang-context";
 import { trpc } from "@/lib/trpc/provider";
 import { NotificationsDropdown } from "@/components/notifications-dropdown";
-import { useTranslation } from "react-i18next";
-import { useTheme } from "next-themes";
+import { KudosMark, initials } from "@/components/kudos/kudos-ui";
+import { CreateItemDialog } from "@/components/studio/create-item-dialog";
 import { Button } from "@skaddosh/ui/components/ui/button";
-import {
-  Avatar,
-  AvatarImage,
-  AvatarFallback,
-} from "@skaddosh/ui/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@skaddosh/ui/components/ui/avatar";
+import { Dialog, DialogContent, DialogTitle } from "@skaddosh/ui/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,450 +25,367 @@ import {
 } from "@skaddosh/ui/components/ui/dropdown-menu";
 import { cn } from "@skaddosh/ui/lib/utils";
 import {
+  ArrowRightIcon,
   BookOpenIcon,
-  BriefcaseBusinessIcon,
+  CompassIcon,
   FileTextIcon,
+  FolderOpenIcon,
   GlobeIcon,
+  ImageIcon,
   InboxIcon,
+  Loader2Icon,
   LogOutIcon,
+  MapIcon,
   MoonIcon,
+  PenToolIcon,
+  PlusIcon,
   SearchIcon,
   SettingsIcon,
   SunIcon,
   UserIcon,
   WalletIcon,
+  type LucideIcon,
 } from "lucide-react";
-import { SEED_WORKS } from "@skaddosh/db/seed-data";
-import { useState, useRef, useCallback, useMemo, useEffect } from "react";
-import { KudosMark } from "@/components/kudos/kudos-ui";
+
+type NavItem = { href: string; label: string; icon: LucideIcon; match: (path: string) => boolean };
+
+export function primaryNav(signedIn: boolean): NavItem[] {
+  const explore: NavItem = {
+    href: signedIn ? "/" : "/explore",
+    label: "Explore",
+    icon: CompassIcon,
+    match: (p) => (signedIn && p === "/") || p.startsWith("/explore") || p.startsWith("/read") || p.startsWith("/projects"),
+  };
+  const trips: NavItem = { href: "/trips", label: "Trips", icon: MapIcon, match: (p) => p.startsWith("/trips") };
+  if (!signedIn) {
+    return [explore, trips, { href: "/how-it-works", label: "How it works", icon: BookOpenIcon, match: (p) => p.startsWith("/how-it-works") }];
+  }
+  return [
+    explore,
+    trips,
+    { href: "/studio", label: "Studio", icon: PenToolIcon, match: (p) => p.startsWith("/studio") },
+    { href: "/kudos", label: "Kudos", icon: WalletIcon, match: (p) => p.startsWith("/kudos") },
+  ];
+}
 
 export function Header() {
-  const { t } = useTranslation();
-  const router = useRouter();
-  const pathname = usePathname();
+  const pathname = usePathname() ?? "/";
   const { data: session } = useSession();
-  type SessionUser = NonNullable<typeof session>["user"] & { role?: string };
-  const user = session?.user as SessionUser | undefined;
-  const { data: me } = trpc.users.me.useQuery(undefined, {
-    enabled: !!session,
-  });
-  const username = (me?.user as { username?: string } | undefined)?.username;
-
+  const { data: me } = trpc.users.me.useQuery(undefined, { enabled: !!session });
   const [searchOpen, setSearchOpen] = useState(false);
-  const [searchVal, setSearchVal] = useState("");
-  const [isMac, setIsMac] = useState(false);
-  useEffect(() => {
-    setIsMac(/mac|iphone|ipad|ipod/i.test(navigator.userAgent));
-  }, []);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const searchQuery = searchVal.trim();
-  const suggestionsQuery = trpc.works.list.useQuery(
-    { limit: 5, search: searchQuery || undefined },
-    { enabled: searchOpen && searchQuery.length >= 2 },
-  );
-  const creatorsQuery = trpc.creators.search.useQuery(
-    { query: searchQuery, limit: 5 },
-    { enabled: searchOpen && searchQuery.length >= 2 },
-  );
-  const creatorResults = creatorsQuery.data ?? [];
-  const searchSuggestions = useMemo(() => {
-    if (searchQuery.length < 2) return [];
-    const live = suggestionsQuery.data ?? [];
-    if (live.length) return live;
-    return SEED_WORKS.filter((work) => {
-      const haystack = [
-        work.title.en,
-        work.title.ar,
-        work.title.fr,
-        work.title.es,
-        work.tag.en,
-        work.tag.ar,
-      ]
-        .join(" ")
-        .toLowerCase();
-      return haystack.includes(searchQuery.toLowerCase());
-    })
-      .slice(0, 5)
-      .map((work) => ({
-        ...work,
-        title: work.title as Record<string, string>,
-        tag: work.tag as Record<string, string>,
-      }));
-  }, [searchQuery, suggestionsQuery.data]);
-
-  const openSearch = useCallback(() => {
-    setSearchOpen(true);
-    setTimeout(() => inputRef.current?.focus(), 50);
-  }, []);
+  const meUser = me?.user as { username?: string; image?: string | null; onboardingCompleted?: boolean } | undefined;
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
-        openSearch();
-      } else if (e.key === "Escape" && searchOpen) {
-        setSearchOpen(false);
-        setSearchVal("");
+        setSearchOpen(true);
       }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [openSearch, searchOpen]);
-
-  const submitSearch = useCallback(
-    (e: React.FormEvent) => {
-      e.preventDefault();
-      if (searchVal.trim())
-        router.push(`/read?q=${encodeURIComponent(searchVal.trim())}`);
-      setSearchOpen(false);
-      setSearchVal("");
-    },
-    [searchVal, router],
-  );
-
-  const openSuggestion = useCallback(
-    (id: string) => {
-      setSearchOpen(false);
-      setSearchVal("");
-      router.push(`/read/${id}`);
-    },
-    [router],
-  );
+  }, []);
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border/60 bg-background/90 backdrop-blur-xl supports-[backdrop-filter]:bg-background/75">
-      <div className="relative grid h-16 w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 px-3 sm:px-6">
-        <div className="flex items-center gap-2 min-w-0 shrink-0">
-          <BrandMark className="min-w-0 shrink-0" />
+    <header className="sticky top-0 z-50 w-full border-b border-border/70 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/70">
+      <div className="mx-auto flex h-16 w-full max-w-[90rem] items-center gap-3 px-4 sm:px-6 lg:px-8">
+        <BrandMark className="shrink-0" />
+
+        <nav aria-label="Primary" className="ml-4 hidden items-center gap-1 md:flex">
+          {primaryNav(Boolean(session)).map(({ href, label, icon: Icon, match }) => {
+            const active = match(pathname);
+            return (
+              <Link
+                key={href}
+                href={href}
+                aria-current={active ? "page" : undefined}
+                className={cn(
+                  "inline-flex h-9 items-center gap-2 rounded-full px-3.5 text-sm font-medium transition-colors",
+                  active ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                )}
+              >
+                <Icon className="size-4" strokeWidth={active ? 2.25 : 1.9} />
+                {label}
+              </Link>
+            );
+          })}
+        </nav>
+
+        <div className="ml-auto flex items-center gap-1.5">
+          <SearchTrigger onOpen={() => setSearchOpen(true)} />
           {session ? (
             <>
-              <span className="hidden h-6 w-px bg-border/60 sm:inline" />
               <WalletChip />
+              <CreateMenu />
+              <NotificationsDropdown />
+              <UserMenu name={session.user.name ?? "Your account"} email={session.user.email ?? ""} image={meUser?.image ?? null} username={meUser?.username} />
             </>
-          ) : null}
-        </div>
-
-        {searchOpen ? (
-          <form
-            onSubmit={submitSearch}
-            className="absolute inset-x-3 z-10 flex min-w-0 items-center gap-1.5 bg-background sm:inset-x-6 md:static md:col-span-2 md:bg-transparent"
-          >
-            <div className="relative flex-1">
-              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
-              <input
-                ref={inputRef}
-                value={searchVal}
-                onChange={(e) => setSearchVal(e.target.value)}
-                placeholder={t("read.searchPlaceholder")}
-                className="h-10 w-full rounded-xl border border-border bg-background py-1.5 pl-9 pr-3 text-sm shadow-sm outline-none transition-shadow placeholder:text-muted-foreground focus:border-ring focus:ring-2 focus:ring-ring/30"
-                aria-label="Search works and creators"
-                onBlur={() => {
-                  if (!searchVal) setSearchOpen(false);
-                }}
-              />
-              {searchQuery.length >= 2 ? (
-                <div className="absolute left-0 right-0 top-full z-50 mt-2 max-h-[70vh] overflow-y-auto rounded-xl border border-border bg-popover shadow-lg">
-                  {creatorResults.length ? (
-                    <>
-                      <div className="border-b border-border px-3 py-2 text-[0.68rem] font-semibold uppercase tracking-wider text-muted-foreground">
-                        Creators
-                      </div>
-                      {creatorResults.map((creator) => (
-                        <button
-                          key={creator.id}
-                          type="button"
-                          onMouseDown={(e) => e.preventDefault()}
-                          onClick={() => {
-                            setSearchOpen(false);
-                            setSearchVal("");
-                            router.push(`/${creator.username}`);
-                          }}
-                          className="flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-muted"
-                        >
-                          <Avatar className="size-7">
-                            {creator.image ? (
-                              <AvatarImage
-                                src={creator.image}
-                                alt={creator.name ?? ""}
-                                className="object-cover"
-                              />
-                            ) : null}
-                            <AvatarFallback className="text-[0.6rem] font-semibold">
-                              {(creator.name ?? "??")
-                                .split(" ")
-                                .map((n) => n[0])
-                                .join("")
-                                .slice(0, 2)
-                                .toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className="min-w-0 flex-1">
-                            <span className="block truncate text-sm font-medium">
-                              {creator.name}
-                            </span>
-                            <span className="block truncate text-xs text-muted-foreground">
-                              @{creator.username}
-                            </span>
-                          </span>
-                        </button>
-                      ))}
-                    </>
-                  ) : null}
-                  <div
-                    className={cn(
-                      "border-b border-border px-3 py-2 text-[0.68rem] font-semibold uppercase tracking-wider text-muted-foreground",
-                      creatorResults.length && "border-t",
-                    )}
-                  >
-                    Suggestions
-                  </div>
-                  {searchSuggestions.length ? (
-                    searchSuggestions.map((item) => {
-                      const title =
-                        item.title.en ||
-                        item.title.ar ||
-                        item.title.fr ||
-                        item.title.es ||
-                        "Untitled";
-                      const tag = item.tag.en || item.tag.ar || "";
-                      return (
-                        <button
-                          key={item.id}
-                          type="button"
-                          onMouseDown={(e) => e.preventDefault()}
-                          onClick={() => openSuggestion(item.id)}
-                          className="flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-muted"
-                        >
-                          <FileTextIcon className="size-4 shrink-0 text-muted-foreground" />
-                          <span className="min-w-0 flex-1">
-                            <span className="block truncate text-sm font-medium">
-                              {title}
-                            </span>
-                            <span className="block truncate text-xs text-muted-foreground">
-                              {tag || item.type || "Work"}
-                            </span>
-                          </span>
-                        </button>
-                      );
-                    })
-                  ) : (
-                    <div className="px-3 py-4 text-sm text-muted-foreground">
-                      {suggestionsQuery.isFetching
-                        ? "Searching..."
-                        : "No suggestions yet."}
-                    </div>
-                  )}
-                  <button
-                    type="submit"
-                    onMouseDown={(e) => e.preventDefault()}
-                    className="flex w-full items-center gap-2 border-t border-border px-3 py-2.5 text-left text-sm font-medium hover:bg-muted"
-                  >
-                    <SearchIcon className="size-4 text-muted-foreground" />
-                    Search for "{
-                      searchQuery
-                    }"
-                  </button>
-                </div>
-              ) : null}
-            </div>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                setSearchOpen(false);
-                setSearchVal("");
-              }}
-            >
-              {t("common.cancel")}
-            </Button>
-          </form>
-        ) : (
-          <>
-            <nav
-              className="hidden min-w-0 items-center justify-center gap-1 md:flex"
-              aria-label="Primary navigation"
-            >
-              <HeaderNavLink
-                href="/"
-                active={pathname === "/" || pathname.startsWith("/read") || pathname.startsWith("/projects")}
-              >
-                Explore
-              </HeaderNavLink>
-              {session ? (
-                <>
-                  <HeaderNavLink href="/kudos" active={pathname.startsWith("/kudos")}>
-                    Kudos
-                  </HeaderNavLink>
-                  <HeaderNavLink href="/studio" active={pathname.startsWith("/studio")}>
-                    Studio
-                  </HeaderNavLink>
-                </>
-              ) : (
-                <HeaderNavLink href="/how-it-works" active={pathname.startsWith("/how-it-works")}>
-                  How it works
-                </HeaderNavLink>
-              )}
-            </nav>
-
-            <div className="col-start-3 flex min-w-0 items-center justify-end gap-1 sm:gap-1.5">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 gap-1.5 px-2"
-                onClick={openSearch}
-                aria-label="Search"
-              >
-                <SearchIcon className="size-4" />
-                <kbd className="hidden rounded border border-border/60 bg-muted px-1.5 py-0.5 font-mono text-[0.65rem] text-muted-foreground sm:inline-block">
-                  {isMac ? "⌘K" : "Ctrl K"}
-                </kbd>
+          ) : (
+            <>
+              <ThemeToggle className="hidden sm:inline-flex" />
+              <Button size="sm" variant="ghost" className="hidden h-9 px-3.5 sm:inline-flex" asChild>
+                <Link href="/auth/login">Sign in</Link>
               </Button>
-
-              {session ? (
-                <>
-                  <div className="hidden items-center sm:flex">
-                    <LanguageDropdown />
-                    <ThemeToggle />
-                  </div>
-                  <NotificationsDropdown />
-                  <UserMenu
-                    name={user?.name ?? "Your account"}
-                    email={user?.email ?? ""}
-                    image={
-                      (me?.user as { image?: string | null } | undefined)
-                        ?.image ?? null
-                    }
-                    username={username}
-                  />
-                </>
-              ) : (
-                <div className="flex items-center gap-1">
-                  <LanguageDropdown />
-                  <ThemeToggle />
-                  <Button size="sm" variant="ghost" className="hidden px-3 sm:inline-flex" asChild>
-                    <Link href="/auth/login">Sign in</Link>
-                  </Button>
-                  <Button size="sm" className="rounded-full px-3.5" asChild>
-                    <Link href="/auth/signup">
-                      <span className="hidden sm:inline">Start your gallery</span>
-                      <span className="sm:hidden">Join</span>
-                    </Link>
-                  </Button>
-                </div>
-              )}
-            </div>
-          </>
-        )}
-      </div>
-      {me?.user && !me.user.onboardingCompleted && !pathname.startsWith("/welcome") ? (
-        <div className="border-t border-border/60 bg-muted/60">
-          <Link
-            href="/welcome"
-            className="mx-auto flex max-w-[96rem] items-center gap-2 px-4 py-2 text-xs text-muted-foreground transition-colors hover:text-foreground sm:px-6 lg:px-10"
-          >
-            <span className="size-1.5 rounded-full bg-hot" />
-            Finish setting up your gallery: it takes two minutes.
-            <span className="ml-auto font-medium text-foreground">Continue →</span>
-          </Link>
+              <Button size="sm" variant="brand" className="h-9 px-4" asChild>
+                <Link href="/auth/signup">Get started</Link>
+              </Button>
+            </>
+          )}
         </div>
+      </div>
+
+      {meUser && meUser.onboardingCompleted === false && !pathname.startsWith("/welcome") ? (
+        <Link
+          href="/welcome"
+          className="flex items-center justify-center gap-2 border-t border-border/60 bg-accent/60 px-4 py-2 text-xs font-medium text-accent-foreground transition-colors hover:bg-accent"
+        >
+          <span className="size-1.5 rounded-full bg-brand" />
+          Finish setting up your gallery. It takes two minutes.
+          <ArrowRightIcon className="size-3.5" />
+        </Link>
       ) : null}
+
+      <SearchDialog open={searchOpen} onOpenChange={setSearchOpen} />
     </header>
   );
 }
 
-function HeaderNavLink({
-  href,
-  active,
-  children,
-}: {
-  href: string;
-  active: boolean;
-  children: React.ReactNode;
-}) {
+function SearchTrigger({ onOpen }: { onOpen: () => void }) {
+  const [isMac, setIsMac] = useState(false);
+  useEffect(() => setIsMac(/mac|iphone|ipad|ipod/i.test(navigator.userAgent)), []);
   return (
-    <Link
-      href={href}
-      aria-current={active ? "page" : undefined}
-      className={cn(
-        "rounded-full px-3.5 py-1.5 text-sm transition-colors",
-        active
-          ? "bg-foreground text-background"
-          : "text-muted-foreground hover:text-foreground",
-      )}
+    <button
+      type="button"
+      onClick={onOpen}
+      aria-label="Search"
+      className="inline-flex h-9 items-center gap-2 rounded-full border border-border bg-card px-2.5 text-sm text-muted-foreground shadow-xs transition-colors hover:border-foreground/20 hover:text-foreground lg:w-56 lg:px-3.5"
     >
-      {children}
-    </Link>
+      <SearchIcon className="size-4" />
+      <span className="hidden flex-1 text-left lg:inline">Search skaddosh</span>
+      <kbd className="hidden rounded-md border border-border bg-muted px-1.5 py-0.5 font-mono text-[0.65rem] lg:inline">
+        {isMac ? "⌘K" : "Ctrl K"}
+      </kbd>
+    </button>
   );
 }
 
-function UserMenu({
-  name,
-  email,
-  image,
-  username,
-}: {
-  name: string;
-  email: string;
-  image: string | null;
-  username?: string;
-}) {
+/** A command-palette style search over creators, pieces, and public trips. */
+function SearchDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const router = useRouter();
-  const initials =
-    name
-      .split(" ")
-      .map((part) => part[0])
-      .join("")
-      .slice(0, 2)
-      .toUpperCase() || "??";
+  const { t } = useTranslation();
+  const [value, setValue] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+  const query = value.trim();
+  const enabled = open && query.length >= 2;
+  const works = trpc.works.list.useQuery({ limit: 5, search: query || undefined }, { enabled });
+  const creators = trpc.creators.search.useQuery({ query, limit: 5 }, { enabled });
+  const trips = trpc.trips.explore.useQuery({ limit: 48 }, { enabled, staleTime: 60_000 });
+  const tripMatches = useMemo(() => {
+    const q = query.toLowerCase();
+    return (trips.data ?? [])
+      .filter((tr) => [tr.title, tr.from, tr.to, tr.summary].join(" ").toLowerCase().includes(q))
+      .slice(0, 4);
+  }, [trips.data, query]);
 
-  const handleSignOut = async () => {
-    await signOut();
-    router.push("/");
-    router.refresh();
-  };
+  const go = useCallback(
+    (href: string) => {
+      onOpenChange(false);
+      setValue("");
+      router.push(href);
+    },
+    [onOpenChange, router],
+  );
 
+  const loading = works.isFetching || creators.isFetching;
+  const nothing = enabled && !loading && !works.data?.length && !creators.data?.length && !tripMatches.length;
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        onOpenChange(next);
+        if (!next) setValue("");
+      }}
+    >
+      <DialogContent className="gap-0 overflow-hidden p-0 sm:top-[12%] sm:max-w-xl sm:translate-y-0" showCloseButton={false} onOpenAutoFocus={(e) => { e.preventDefault(); inputRef.current?.focus(); }}>
+        <DialogTitle className="sr-only">Search</DialogTitle>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (query) go(`/read?q=${encodeURIComponent(query)}`);
+          }}
+          className="flex items-center gap-3 border-b border-border px-4"
+        >
+          <SearchIcon className="size-5 text-muted-foreground" />
+          <input
+            ref={inputRef}
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            placeholder={t("read.searchPlaceholder")}
+            aria-label="Search creators, pieces, and trips"
+            className="h-14 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground"
+          />
+          {loading ? <Loader2Icon className="size-4 animate-spin text-muted-foreground" /> : null}
+          <kbd className="rounded-md border border-border bg-muted px-1.5 py-0.5 font-mono text-[0.65rem] text-muted-foreground">Esc</kbd>
+        </form>
+        <div className="max-h-[60vh] overflow-y-auto p-2">
+          {!enabled ? (
+            <div className="grid gap-1 p-1 sm:grid-cols-2">
+              {[
+                { href: "/", label: "Explore the gallery", icon: CompassIcon },
+                { href: "/trips", label: "Browse trips", icon: MapIcon },
+                { href: "/read", label: "Read pieces", icon: BookOpenIcon },
+                { href: "/how-it-works", label: "How skaddosh works", icon: FileTextIcon },
+              ].map(({ href, label, icon: Icon }) => (
+                <button key={href} type="button" onClick={() => go(href)} className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm hover:bg-muted">
+                  <span className="flex size-8 items-center justify-center rounded-lg bg-accent text-accent-foreground">
+                    <Icon className="size-4" />
+                  </span>
+                  {label}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <>
+              <ResultGroup title="Creators" show={Boolean(creators.data?.length)}>
+                {creators.data?.map((c) => (
+                  <ResultRow key={c.id} onSelect={() => go(`/${c.username}`)} title={c.name ?? ""} subtitle={`@${c.username}`}>
+                    <Avatar className="size-8">
+                      {c.image ? <AvatarImage src={c.image} alt="" className="object-cover" /> : null}
+                      <AvatarFallback className="text-[0.65rem] font-semibold">{initials(c.name ?? "?")}</AvatarFallback>
+                    </Avatar>
+                  </ResultRow>
+                ))}
+              </ResultGroup>
+              <ResultGroup title="Trips" show={tripMatches.length > 0}>
+                {tripMatches.map((tr) => (
+                  <ResultRow key={tr.id} onSelect={() => go(`/trips/${tr.id}`)} title={tr.title} subtitle={[tr.from, tr.to].filter(Boolean).join(" → ")}>
+                    <span className="flex size-8 items-center justify-center rounded-lg text-white" style={{ background: tr.accentColor }}>
+                      <MapIcon className="size-4" />
+                    </span>
+                  </ResultRow>
+                ))}
+              </ResultGroup>
+              <ResultGroup title="Pieces" show={Boolean(works.data?.length)}>
+                {works.data?.map((w) => {
+                  const title = (w.title as Record<string, string>);
+                  return (
+                    <ResultRow key={w.id} onSelect={() => go(`/read/${w.id}`)} title={title.en || title.ar || title.fr || title.es || "Untitled"} subtitle={w.type ?? "Piece"}>
+                      <span className="flex size-8 items-center justify-center rounded-lg bg-muted">
+                        <FileTextIcon className="size-4 text-muted-foreground" />
+                      </span>
+                    </ResultRow>
+                  );
+                })}
+              </ResultGroup>
+              {nothing ? <p className="px-3 py-8 text-center text-sm text-muted-foreground">Nothing matches “{query}”.</p> : null}
+              <button type="button" onClick={() => go(`/read?q=${encodeURIComponent(query)}`)} className="mt-1 flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-medium hover:bg-muted">
+                <SearchIcon className="size-4 text-muted-foreground" />
+                Search all pieces for “{query}”
+              </button>
+            </>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function ResultGroup({ title, show, children }: { title: string; show: boolean; children: React.ReactNode }) {
+  if (!show) return null;
+  return (
+    <div className="mb-1">
+      <p className="px-3 pb-1 pt-2 text-[0.68rem] font-semibold uppercase tracking-wider text-muted-foreground">{title}</p>
+      {children}
+    </div>
+  );
+}
+
+function ResultRow({ title, subtitle, onSelect, children }: { title: string; subtitle?: string; onSelect: () => void; children: React.ReactNode }) {
+  return (
+    <button type="button" onClick={onSelect} className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left hover:bg-muted">
+      {children}
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-sm font-medium">{title}</span>
+        {subtitle ? <span className="block truncate text-xs capitalize text-muted-foreground">{subtitle}</span> : null}
+      </span>
+    </button>
+  );
+}
+
+/** One place to start anything: a project, a trip, a piece, or a photo collection. */
+export function CreateMenu({ compact = false }: { compact?: boolean }) {
+  const router = useRouter();
+  const [dialogType, setDialogType] = useState<"article" | "project" | "gallery" | null>(null);
+  const createTrip = trpc.trips.create.useMutation({ onSuccess: ({ id }) => router.push(`/trips/${id}`) });
+  const items = [
+    { key: "project", label: "Project", hint: "Show work in progress and find backers", icon: FolderOpenIcon, onSelect: () => setDialogType("project") },
+    { key: "trip", label: "Trip", hint: "Plan a route on the map", icon: MapIcon, onSelect: () => createTrip.mutate({}) },
+    { key: "article", label: "Writing", hint: "A story, essay, or poem", icon: FileTextIcon, onSelect: () => setDialogType("article") },
+    { key: "gallery", label: "Collection", hint: "A set of photos or images", icon: ImageIcon, onSelect: () => setDialogType("gallery") },
+  ] as const;
+  return (
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="brand" size="sm" className={cn("h-9", compact ? "size-11 p-0 [&_svg]:size-5" : "px-3.5")} aria-label="Create">
+            {createTrip.isPending ? <Loader2Icon className="size-4 animate-spin" /> : <PlusIcon className="size-4" />}
+            {compact ? null : <span className="hidden sm:inline">Create</span>}
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-72 p-1.5">
+          {items.map(({ key, label, hint, icon: Icon, onSelect }) => (
+            <DropdownMenuItem key={key} onSelect={onSelect} className="items-start gap-3 rounded-lg px-2.5 py-2">
+              <span className="mt-0.5 flex size-8 items-center justify-center rounded-lg bg-accent text-accent-foreground">
+                <Icon className="size-4" />
+              </span>
+              <span>
+                <span className="block text-sm font-medium">{label}</span>
+                <span className="block text-xs text-muted-foreground">{hint}</span>
+              </span>
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <CreateItemDialog open={dialogType !== null} onOpenChange={(open) => !open && setDialogType(null)} initialType={dialogType ?? undefined} />
+    </>
+  );
+}
+
+function UserMenu({ name, email, image, username }: { name: string; email: string; image: string | null; username?: string }) {
+  const router = useRouter();
+  const { lang, setLang } = useLang();
+  const { resolvedTheme, setTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button
-          variant="ghost"
-          className="relative size-9 rounded-full p-0"
-          aria-label="Open account menu"
-        >
-          <Avatar className="size-8">
-            {image ? (
-              <AvatarImage src={image} alt={name} className="object-cover" />
-            ) : null}
-            <AvatarFallback className="text-xs font-semibold">
-              {initials}
-            </AvatarFallback>
+        <Button variant="ghost" className="size-9 rounded-full p-0" aria-label="Open account menu">
+          <Avatar className="size-8 ring-2 ring-background">
+            {image ? <AvatarImage src={image} alt="" className="object-cover" /> : null}
+            <AvatarFallback className="bg-accent text-xs font-semibold text-accent-foreground">{initials(name)}</AvatarFallback>
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-64">
+      <DropdownMenuContent align="end" className="w-64 p-1.5">
         <DropdownMenuLabel className="font-normal">
-          <span className="block truncate text-sm font-semibold text-foreground">
-            {name}
-          </span>
-          <span className="mt-0.5 block truncate text-xs text-muted-foreground">
-            {email}
-          </span>
+          <span className="block truncate text-sm font-semibold text-foreground">{name}</span>
+          <span className="mt-0.5 block truncate text-xs text-muted-foreground">{email}</span>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
           <Link href={username ? `/${username}` : "/profile"}>
-            <UserIcon /> Public profile
+            <UserIcon /> Your profile
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href="/trips">
+            <MapIcon /> Your trips
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
           <Link href="/kudos">
-            <WalletIcon /> Kudos wallet
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href="/studio">
-            <BriefcaseBusinessIcon /> Studio
+            <WalletIcon /> Kudos
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
@@ -486,8 +404,33 @@ function UserMenu({
           </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
+        <div className="flex items-center gap-1 px-1.5 py-1">
+          <GlobeIcon className="mr-1 size-4 text-muted-foreground" />
+          {SITE_LANGS.map((item) => (
+            <button
+              key={item.code}
+              type="button"
+              onClick={() => setLang(item.code)}
+              aria-pressed={lang === item.code}
+              className={cn(
+                "rounded-md px-2 py-1 font-mono text-[0.68rem] font-semibold uppercase",
+                lang === item.code ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-muted",
+              )}
+            >
+              {item.short}
+            </button>
+          ))}
+        </div>
+        <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setTheme(isDark ? "light" : "dark"); }}>
+          {isDark ? <SunIcon /> : <MoonIcon />} {isDark ? "Light theme" : "Dark theme"}
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
         <DropdownMenuItem
-          onSelect={() => void handleSignOut()}
+          onSelect={async () => {
+            await signOut();
+            router.push("/");
+            router.refresh();
+          }}
           className="text-destructive focus:text-destructive"
         >
           <LogOutIcon /> Sign out
@@ -497,38 +440,39 @@ function UserMenu({
   );
 }
 
-function LanguageDropdown() {
+export function ThemeToggle({ className }: { className?: string }) {
+  const { resolvedTheme, setTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon"
+      className={cn("size-9", className)}
+      onClick={() => setTheme(isDark ? "light" : "dark")}
+      aria-label={isDark ? "Switch to light theme" : "Switch to dark theme"}
+    >
+      {isDark ? <SunIcon className="size-4" /> : <MoonIcon className="size-4" />}
+    </Button>
+  );
+}
+
+export function LanguageDropdown() {
   const { lang, setLang } = useLang();
   const active = SITE_LANGS.find((item) => item.code === lang) ?? SITE_LANGS[0];
-
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-8 gap-1.5 px-2"
-          aria-label="Change language"
-        >
+        <Button variant="ghost" size="sm" className="h-9 gap-1.5 px-2.5" aria-label="Change language">
           <GlobeIcon className="size-4" />
-          <span className="font-mono text-[0.7rem] font-semibold uppercase">
-            {active?.short ?? "EN"}
-          </span>
+          <span className="font-mono text-[0.7rem] font-semibold uppercase">{active?.short ?? "EN"}</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-44">
-        <DropdownMenuLabel>Language</DropdownMenuLabel>
-        <DropdownMenuSeparator />
         {SITE_LANGS.map((item) => (
-          <DropdownMenuItem
-            key={item.code}
-            onClick={() => setLang(item.code)}
-            className="flex items-center justify-between"
-          >
+          <DropdownMenuItem key={item.code} onClick={() => setLang(item.code)} className="flex items-center justify-between">
             <span>{item.label}</span>
-            <span className="font-mono text-[0.65rem] text-muted-foreground">
-              {item.short}
-            </span>
+            <span className="font-mono text-[0.65rem] text-muted-foreground">{item.short}</span>
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>
@@ -536,36 +480,14 @@ function LanguageDropdown() {
   );
 }
 
-function ThemeToggle() {
-  const { resolvedTheme, setTheme } = useTheme();
-  const isDark = resolvedTheme === "dark";
-
-  return (
-    <Button
-      type="button"
-      variant="ghost"
-      size="icon"
-      className="size-8"
-      onClick={() => setTheme(isDark ? "light" : "dark")}
-      aria-label={isDark ? "Switch to light theme" : "Switch to dark theme"}
-    >
-      {isDark ? (
-        <SunIcon className="size-4" />
-      ) : (
-        <MoonIcon className="size-4" />
-      )}
-    </Button>
-  );
-}
-
-/** Hot · Cold at a glance. Kudos are the center of the product, so they're always visible. */
+/** Hot · Cold at a glance. */
 function WalletChip() {
   const { data: wallet } = trpc.kudos.wallet.useQuery(undefined, { staleTime: 30_000 });
   return (
     <Link
       href="/kudos"
-      aria-label={`Kudos wallet: ${wallet?.hot ?? 0} Hot, ${wallet?.cold ?? 0} Cold`}
-      className="inline-flex h-8 items-center gap-2 rounded-full border border-border bg-card px-2.5 text-xs font-semibold tabular-nums transition-colors hover:border-foreground/25"
+      aria-label={`Kudos: ${wallet?.hot ?? 0} Hot, ${wallet?.cold ?? 0} Cold`}
+      className="hidden h-9 items-center gap-2 rounded-full border border-border bg-card px-3 text-xs font-semibold tabular-nums shadow-xs transition-colors hover:border-foreground/20 lg:inline-flex"
     >
       <span className="inline-flex items-center gap-1">
         <KudosMark temp="hot" size="xs" />

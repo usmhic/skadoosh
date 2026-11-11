@@ -14,7 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@skaddosh/ui/components/ui/dropdown-menu";
 import { cn } from "@skaddosh/ui/lib/utils";
-import { ArrowRightIcon, ChevronDownIcon, SparklesIcon } from "lucide-react";
+import { ArrowRightIcon, ChevronDownIcon } from "lucide-react";
 import { Gallery, GallerySkeleton } from "@/components/gallery/gallery-tile";
 import { MEDIUM_INFO } from "@/lib/mediums";
 import type { Medium } from "@skaddosh/db/schema";
@@ -58,10 +58,24 @@ export function Explore() {
   const visibleMediums = (Object.keys(MEDIUM_INFO) as Medium[]).filter((m) => m !== "other" && (counts.get(m) ?? 0) > 0);
 
   return (
-    <div className="mx-auto w-full max-w-[96rem] px-4 pb-20 sm:px-6 lg:px-10">
-      {!session ? <Hero /> : null}
+    <div className="mx-auto w-full max-w-[90rem] px-4 pb-20 sm:px-6 lg:px-8">
+      <header className="flex flex-col gap-4 pb-6 pt-8 sm:flex-row sm:items-end sm:justify-between sm:pt-12">
+        <div>
+          <h1 className="font-display text-4xl tracking-tight sm:text-5xl">Explore</h1>
+          <p className="mt-2 max-w-xl text-pretty text-muted-foreground">
+            Original work by verified people. Appreciate it, back it early, license it, or help make it.
+          </p>
+        </div>
+        {!session ? (
+          <Button asChild variant="brand" className="self-start sm:self-auto">
+            <Link href="/auth/signup">
+              Start your gallery <ArrowRightIcon className="size-4" />
+            </Link>
+          </Button>
+        ) : null}
+      </header>
 
-      <div className={cn("sticky top-16 z-30 -mx-4 border-b border-border/60 bg-background/90 px-4 backdrop-blur-xl sm:-mx-6 sm:px-6 lg:-mx-10 lg:px-10", session ? "mt-0" : "")}>
+      <div className={cn("sticky top-16 z-30 -mx-4 border-b border-border/60 bg-background/90 px-4 backdrop-blur-xl sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8", session ? "mt-0" : "")}>
         <div className="flex items-center gap-3 py-3">
           <nav aria-label="Filter by medium" className="-mx-1 flex min-w-0 flex-1 gap-1 overflow-x-auto px-1 [scrollbar-width:none]">
             <MediumChip active={!medium} onClick={() => setParam("medium", null)}>
@@ -145,32 +159,6 @@ function MediumChip({ active, onClick, children }: { active: boolean; onClick: (
   );
 }
 
-function Hero() {
-  return (
-    <section className="py-14 sm:py-20">
-      <p className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-xs text-muted-foreground">
-        <SparklesIcon className="size-3.5 text-hot" /> A gallery of original, human-made work
-      </p>
-      <h1 className="mt-6 max-w-5xl text-balance font-display text-6xl leading-[0.95] tracking-tight sm:text-8xl">
-        Original work, <em className="text-hot">made by people.</em>
-      </h1>
-      <p className="mt-6 max-w-2xl text-pretty text-lg leading-8 text-muted-foreground">
-        Discover art, software, music, writing, and ideas from verified creators. Appreciate them with Kudos,
-        back them early, license their work, or join in.
-      </p>
-      <div className="mt-8 flex flex-wrap gap-3">
-        <Button asChild size="lg" className="h-12 rounded-full px-6">
-          <Link href="/auth/signup">
-            Start your gallery <ArrowRightIcon className="size-4" />
-          </Link>
-        </Button>
-        <Button asChild size="lg" variant="outline" className="h-12 rounded-full px-6">
-          <Link href="/how-it-works">How it works</Link>
-        </Button>
-      </div>
-    </section>
-  );
-}
 
 function Empty({ title, body, children }: { title: string; body: string; children?: React.ReactNode }) {
   return (

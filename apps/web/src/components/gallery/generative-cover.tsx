@@ -123,7 +123,7 @@ export function GenerativeCover({
           x={W * 0.08}
           y={H * 0.86}
           fill={tone(0.9)}
-          style={{ fontFamily: "var(--font-instrument-serif), Georgia, serif", fontSize: 300, fontStyle: "italic" }}
+          style={{ fontFamily: "var(--font-bricolage), system-ui, sans-serif", fontSize: 300, fontWeight: 700 }}
         >
           {title.trim().charAt(0).toUpperCase()}
         </text>

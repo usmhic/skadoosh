@@ -1,6 +1,9 @@
 import { Header } from "@/components/header";
 import { Suspense } from "react";
 import { Explore } from "@/components/gallery/explore";
+import { Landing } from "@/components/landing/landing";
+import { SiteFooter } from "@/components/site-footer";
+import { auth } from "@skaddosh/auth/server";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { and, eq, sql } from "drizzle-orm";
@@ -39,17 +42,24 @@ async function redirectCustomDomainHome() {
   if (profile?.username) redirect(`/portfolio/${profile.username}`);
 }
 
+/** Signed-out visitors get the landing page; members go straight to the gallery. */
 export default async function RootPage() {
   await redirectCustomDomainHome();
+  const session = await auth.api.getSession({ headers: await headers() }).catch(() => null);
 
   return (
     <div className="flex min-h-screen flex-col">
       <Header />
       <main className="flex-1">
-        <Suspense>
-          <Explore />
-        </Suspense>
+        {session ? (
+          <Suspense>
+            <Explore />
+          </Suspense>
+        ) : (
+          <Landing />
+        )}
       </main>
+      <SiteFooter />
     </div>
   );
 }

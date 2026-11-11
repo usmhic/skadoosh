@@ -13,7 +13,7 @@
   --font-mono: var(--font-geist-mono);
   --font-arabic: var(--font-cairo);
   --font-reading: var(--font-amiri);
-  --font-display: var(--font-instrument-serif);
+  --font-display: var(--font-bricolage);
   --font-serif: var(--font-newsreader);
 
   --color-background: var(--background);
@@ -42,6 +42,11 @@
   --color-cold-foreground: var(--cold-foreground);
   --color-cold-soft: var(--cold-soft);
   --color-verified: var(--verified);
+  --color-brand-1: var(--brand-1);
+  --color-brand-2: var(--brand-2);
+  --color-brand-3: var(--brand-3);
+  --shadow-soft: var(--shadow-soft);
+  --shadow-lift: var(--shadow-lift);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -50,62 +55,74 @@
 }
 
 :root {
-  /* Paper and ink. Colour belongs to the work; the interface stays quiet. */
-  --background: oklch(0.987 0.004 85);
-  --foreground: oklch(0.2 0.012 280);
+  /* Warm paper, violet ink, and the brand gradient from the mark (violet → coral → amber).
+     Colour belongs to the work; the interface uses the gradient only for moments that matter. */
+  --background: oklch(0.986 0.004 80);
+  --foreground: oklch(0.19 0.025 285);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.2 0.012 280);
+  --card-foreground: oklch(0.19 0.025 285);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.2 0.012 280);
-  --primary: oklch(0.2 0.012 280);
-  --primary-foreground: oklch(0.987 0.004 85);
-  --secondary: oklch(0.955 0.006 85);
-  --secondary-foreground: oklch(0.24 0.012 280);
-  --muted: oklch(0.958 0.006 85);
-  --muted-foreground: oklch(0.5 0.012 280);
-  --accent: oklch(0.945 0.008 85);
-  --accent-foreground: oklch(0.2 0.012 280);
-  --destructive: oklch(0.58 0.2 27);
-  --border: oklch(0.905 0.007 85);
-  --input: oklch(0.89 0.008 85);
-  --ring: oklch(0.2 0.012 280);
-  /* Kudos temperatures: Hot (ember, liquid) and Cold (glacier, committed). See docs/PRODUCT.md §6. */
-  --hot: oklch(0.66 0.19 40);
-  --hot-foreground: oklch(0.99 0.004 85);
-  --hot-soft: oklch(0.96 0.03 55);
-  --cold: oklch(0.54 0.13 250);
-  --cold-foreground: oklch(0.99 0.004 85);
-  --cold-soft: oklch(0.96 0.02 245);
-  --verified: oklch(0.56 0.12 160);
-  --radius: 0.875rem;
+  --popover-foreground: oklch(0.19 0.025 285);
+  --primary: oklch(0.52 0.24 283);
+  --primary-foreground: oklch(0.99 0.004 80);
+  --secondary: oklch(0.955 0.008 285);
+  --secondary-foreground: oklch(0.24 0.03 285);
+  --muted: oklch(0.962 0.006 80);
+  --muted-foreground: oklch(0.5 0.02 285);
+  --accent: oklch(0.955 0.02 290);
+  --accent-foreground: oklch(0.36 0.16 285);
+  --destructive: oklch(0.58 0.21 25);
+  --border: oklch(0.91 0.008 285);
+  --input: oklch(0.885 0.01 285);
+  --ring: oklch(0.52 0.24 283);
+  /* Brand gradient stops, sampled from public/brand/mark.png. */
+  --brand-1: oklch(0.5 0.25 279);
+  --brand-2: oklch(0.63 0.24 5);
+  --brand-3: oklch(0.82 0.15 72);
+  /* Kudos temperatures: Hot (coral, liquid) and Cold (glacier, committed). See docs/PRODUCT.md §6. */
+  --hot: oklch(0.65 0.2 32);
+  --hot-foreground: oklch(0.99 0.004 80);
+  --hot-soft: oklch(0.96 0.03 45);
+  --cold: oklch(0.55 0.14 245);
+  --cold-foreground: oklch(0.99 0.004 80);
+  --cold-soft: oklch(0.96 0.025 245);
+  --verified: oklch(0.56 0.13 160);
+  --radius: 1rem;
+  --shadow-soft: 0 1px 2px oklch(0.19 0.025 285 / 4%), 0 8px 24px -12px oklch(0.19 0.025 285 / 12%);
+  --shadow-lift: 0 2px 4px oklch(0.19 0.025 285 / 4%), 0 24px 48px -20px oklch(0.3 0.12 285 / 28%);
 }
 
 .dark {
-  --background: oklch(0.155 0.008 280);
-  --foreground: oklch(0.955 0.006 85);
-  --card: oklch(0.19 0.01 280);
-  --card-foreground: oklch(0.955 0.006 85);
-  --popover: oklch(0.19 0.01 280);
-  --popover-foreground: oklch(0.955 0.006 85);
-  --primary: oklch(0.955 0.006 85);
-  --primary-foreground: oklch(0.17 0.01 280);
-  --secondary: oklch(0.24 0.01 280);
-  --secondary-foreground: oklch(0.94 0.006 85);
-  --muted: oklch(0.23 0.01 280);
-  --muted-foreground: oklch(0.72 0.01 85);
-  --accent: oklch(0.26 0.012 280);
-  --accent-foreground: oklch(0.955 0.006 85);
+  --background: oklch(0.155 0.02 285);
+  --foreground: oklch(0.96 0.006 80);
+  --card: oklch(0.195 0.024 285);
+  --card-foreground: oklch(0.96 0.006 80);
+  --popover: oklch(0.205 0.026 285);
+  --popover-foreground: oklch(0.96 0.006 80);
+  --primary: oklch(0.72 0.17 285);
+  --primary-foreground: oklch(0.15 0.02 285);
+  --secondary: oklch(0.25 0.025 285);
+  --secondary-foreground: oklch(0.94 0.006 80);
+  --muted: oklch(0.23 0.022 285);
+  --muted-foreground: oklch(0.72 0.02 285);
+  --accent: oklch(0.27 0.05 285);
+  --accent-foreground: oklch(0.9 0.06 285);
   --destructive: oklch(0.68 0.19 25);
-  --border: oklch(0.96 0.006 85 / 11%);
-  --input: oklch(0.96 0.006 85 / 15%);
-  --ring: oklch(0.955 0.006 85);
-  --hot: oklch(0.74 0.16 45);
-  --hot-foreground: oklch(0.16 0.01 280);
-  --hot-soft: oklch(0.3 0.06 45);
-  --cold: oklch(0.74 0.11 240);
-  --cold-foreground: oklch(0.16 0.01 280);
-  --cold-soft: oklch(0.28 0.05 245);
-  --verified: oklch(0.74 0.13 160);
+  --border: oklch(0.96 0.006 80 / 11%);
+  --input: oklch(0.96 0.006 80 / 16%);
+  --ring: oklch(0.72 0.17 285);
+  --brand-1: oklch(0.66 0.2 280);
+  --brand-2: oklch(0.72 0.19 5);
+  --brand-3: oklch(0.85 0.14 72);
+  --hot: oklch(0.74 0.16 38);
+  --hot-foreground: oklch(0.16 0.02 285);
+  --hot-soft: oklch(0.3 0.07 38);
+  --cold: oklch(0.75 0.11 240);
+  --cold-foreground: oklch(0.16 0.02 285);
+  --cold-soft: oklch(0.29 0.05 245);
+  --verified: oklch(0.75 0.13 160);
+  --shadow-soft: 0 1px 2px oklch(0 0 0 / 30%), 0 8px 24px -12px oklch(0 0 0 / 50%);
+  --shadow-lift: 0 2px 4px oklch(0 0 0 / 30%), 0 24px 48px -20px oklch(0 0 0 / 60%);
 }
 
 @layer base {
@@ -180,10 +197,24 @@
     font-family: var(--font-reading), "Georgia", serif;
   }
   .font-display {
-    font-family: var(--font-display), var(--font-serif), Georgia, serif;
-    /* Instrument Serif ships one weight: never fake a bold. */
-    font-synthesis: none;
-    letter-spacing: -0.01em;
+    font-family: var(--font-display), var(--font-sans), system-ui, sans-serif;
+    font-weight: 650;
+    letter-spacing: -0.025em;
+    font-optical-sizing: auto;
+  }
+  /* The brand gradient, for primary actions and a few highlighted words. */
+  .bg-brand {
+    background-image: linear-gradient(120deg, var(--brand-1) 0%, var(--brand-2) 62%, var(--brand-3) 100%);
+  }
+  .text-brand {
+    background-image: linear-gradient(110deg, var(--brand-1) 5%, var(--brand-2) 60%, var(--brand-3) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .bg-dots {
+    background-image: radial-gradient(color-mix(in oklch, var(--foreground) 10%, transparent) 1px, transparent 1px);
+    background-size: 18px 18px;
   }
   .font-serif {
     font-family: var(--font-serif), Georgia, serif;

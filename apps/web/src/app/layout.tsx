@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Amiri, Cairo, Geist, Geist_Mono, Instrument_Serif, Newsreader } from "next/font/google";
+import { Amiri, Bricolage_Grotesque, Cairo, Geist, Geist_Mono, Newsreader } from "next/font/google";
 import { Providers } from "./providers";
 import { MobileTabBar } from "@/components/mobile-tab-bar";
 import "@skaddosh/ui/globals.css";
@@ -29,12 +29,10 @@ const amiri = Amiri({
   variable: "--font-amiri",
   display:  "swap",
 });
-// Display face for headlines; only ships in 400, so headings never use synthetic bold.
-const instrumentSerif = Instrument_Serif({
-  weight:  ["400"],
-  style:   ["normal", "italic"],
+// Display face for headlines: a variable grotesk with optical sizes, to match the brand mark.
+const bricolage = Bricolage_Grotesque({
   subsets: ["latin"],
-  variable: "--font-instrument-serif",
+  variable: "--font-bricolage",
   display:  "swap",
 });
 // Long-form reading face for stories, essays, and project write-ups.
@@ -126,7 +124,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning
-      className={[geist.variable, geistMono.variable, cairo.variable, amiri.variable, instrumentSerif.variable, newsreader.variable].join(" ")}>
+      className={[geist.variable, geistMono.variable, cairo.variable, amiri.variable, bricolage.variable, newsreader.variable].join(" ")}>
       <body className="min-h-screen bg-background font-sans antialiased">
         <Providers>
           {children}
