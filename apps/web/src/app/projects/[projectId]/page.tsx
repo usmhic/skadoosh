@@ -27,6 +27,7 @@ import {
 import { GenerativeCover } from "@/components/gallery/generative-cover";
 import { ContributeDialog, ContributorsSection } from "@/components/project/contributors-section";
 import { LicensesSection } from "@/components/project/licenses-section";
+import { ProjectTrips } from "@/components/project/project-trips";
 import { mediumLabel } from "@/lib/mediums";
 import { BodyContent } from "@/components/body-content";
 import { FollowButton } from "@/components/follow-button";
@@ -214,6 +215,8 @@ function ProjectView({ project, refetch }: { project: PublicProject; refetch: ()
           </Section>
 
           <ContributorsSection projectId={project.id} creator={project.creator} isOwner={project.viewer.isOwner} />
+
+          <ProjectTrips projectId={project.id} isOwner={project.viewer.isOwner} />
 
           {project.openRoles.length ? (
             <Section title="Looking for" hint="Open roles on this project. Offer your skills and agree on credit and a share with the creator.">
