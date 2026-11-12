@@ -12,6 +12,8 @@ import { ExploreScreen } from "@/screens/ExploreScreen";
 import { ProjectScreen } from "@/screens/ProjectScreen";
 import { KudosScreen } from "@/screens/KudosScreen";
 import { VerifyScreen } from "@/screens/VerifyScreen";
+import { TripsScreen } from "@/screens/TripsScreen";
+import { TripScreen } from "@/screens/TripScreen";
 import { ReadScreen } from "@/screens/ReadScreen";
 import { ProfileScreen } from "@/screens/ProfileScreen";
 import { LoginScreen } from "@/screens/LoginScreen";
@@ -34,6 +36,7 @@ export type RootStackParams = {
   Read: { workId: string };
   Project: { projectId: string };
   Verify: undefined;
+  Trip: { tripId: string };
   Login: undefined;
   Signup: { role?: string } | undefined;
   ForgotPassword: undefined;
@@ -50,6 +53,7 @@ export type RootStackParams = {
 
 type TabsParams = {
   Explore: undefined;
+  Trips: undefined;
   Kudos: undefined;
   Studio: undefined;
   Profile: undefined;
@@ -73,6 +77,7 @@ const SKADDOSH_NAV_THEME = {
 
 const TAB_ICONS: Record<string, { active: string; inactive: string }> = {
   Explore: { active: "◐", inactive: "◑" },
+  Trips: { active: "⌖", inactive: "⌖" },
   Kudos: { active: "Ⓚ", inactive: "Ⓚ" },
   Studio: { active: "\u2726", inactive: "\u2727" },
   Profile: { active: "◎", inactive: "◎" },
@@ -216,6 +221,7 @@ function Tabs() {
       screenOptions={{ headerShown: false }}
     >
       <Tab.Screen name="Explore" component={ExploreScreen} options={{ tabBarLabel: "Explore" }} />
+      <Tab.Screen name="Trips" component={TripsScreen} options={{ tabBarLabel: "Trips" }} />
       <Tab.Screen name="Kudos" component={KudosScreen} options={{ tabBarLabel: "Kudos" }} />
       <Tab.Screen
         name="Studio"
@@ -261,6 +267,7 @@ export function AppNavigator() {
         />
         <Stack.Screen name="Project" component={ProjectScreen} options={{ title: "" }} />
         <Stack.Screen name="Verify" component={VerifyScreen} options={{ title: "Verify" }} />
+        <Stack.Screen name="Trip" component={TripScreen} options={{ title: "" }} />
         <Stack.Screen
           name="Login"
           component={LoginScreen}
