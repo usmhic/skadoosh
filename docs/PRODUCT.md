@@ -83,17 +83,25 @@ understandable currency.
 
 ### Navigation
 
-Few destinations, always visible:
+Signed-out visitors land on a **landing page** at `/`. It has a hero with a collage of real work and a
+real trip, the four ways to support, a Trips feature section, a gallery preview, and a closing call to
+action. Members go straight to the gallery.
+
+A few destinations, always visible:
 
 | Destination | Purpose |
 |---|---|
-| **Explore** (`/`) | The gallery: every medium, filtered by chips, sorted by mode |
-| **How it works** (`/how-it-works`, signed out) | The four ways to support, verification, originality, and on-chain Kudos in plain words |
+| **Explore** (`/` for members, `/explore` for everyone) | The gallery: every medium, filtered by chips, sorted by mode |
+| **Trips** (`/trips`) | Plan journeys on a map, and browse public ones. See [TRIPS.md](./TRIPS.md) |
+| **Studio** (`/studio`) | Make things, plus a "Needs you" inbox and your trips |
 | **Kudos** (`/kudos`) | Your wallet: Hot, Cold, backings, licences you hold, history, and optionally your own wallet |
-| **Studio** (`/studio`) | Make things, plus a "Needs you" inbox for verification and collaboration requests |
+| **How it works** (`/how-it-works`, signed out) | The four ways to support, verification, originality, and on-chain Kudos in plain words |
 
-On mobile web and in the app, the same destinations are a bottom tab bar. The header wallet chip
-shows **Hot · Cold**. New members go through `/welcome` (you, what you make, verify).
+The header holds a search button (⌘K / Ctrl K opens a command palette over creators, pieces, and trips),
+the **Hot · Cold** chip, a gradient **Create** menu (project, trip, writing, collection),
+notifications, and the account menu (with language and theme). On phones, a floating bottom tab bar
+holds Explore, Trips, Create, Kudos, and Studio. New members go through `/welcome` (you, what you make,
+verify).
 
 ### Explore
 
@@ -156,6 +164,16 @@ Reputation is computed live from what happened. There is no single number to gam
 | **Early believer** | Projects this person backed during *Idea* that went on to ship | Rewards taste and turns supporters into curators |
 | **Process posts** | Updates published on their projects | Shows the work being made by a human |
 
+### Trips (`/trips`, `/trips/:id`)
+
+Creative work often involves going somewhere: field research, a tour, a shoot, a sketching ride. A
+trip is an ordered list of stops on a map with real routes between them, organised into days. The
+planner puts the stop list beside a full-height map on desktop, and the map above the plan on
+phones. You can search places or tap the map, drag pins, reorder stops, switch how you travel, and
+reorder stops for the shortest route with **Best order**. You can also set days, stay times, and notes,
+share the trip (private, link only, or public), copy someone's public trip, download GPX, and link the
+trip to a project, which shows it under "The journey". Full details are in [TRIPS.md](./TRIPS.md).
+
 ### Mediums
 
 Every project has one **medium**: art, design, software, music, writing, film, games, photography,
@@ -213,16 +231,21 @@ skaddosh is for original human creative work.
 
 ## 6. Visual and interaction language
 
-* **Paper and ink.** A warm paper background, deep ink text, and ink as the primary colour.
-  **Instrument Serif** for display, **Newsreader** for long-form reading, **Geist** for UI, and
-  Geist Mono for codes and hashes. It should read like a gallery, not a trading dashboard.
-* **The mark.** An ink tile with a paper four-point spark and a small ember dot: a moment of
-  appreciation landing on a piece of work. The wordmark is set in the display serif.
+* **Paper, violet ink, and one gradient.** A warm paper background, deep violet-ink text, and
+  brand violet as the primary colour. The **brand gradient** (violet → coral → amber, sampled from the
+  mark) is reserved for primary actions, a few highlighted words, and closing calls to action.
+* **Type.** **Bricolage Grotesque** for display, **Geist** for UI, **Newsreader** for long-form
+  reading, and Geist Mono for codes and hashes. Arabic uses Cairo and Amiri.
+* **The mark.** The gradient "S" with its amber spark (`public/brand/mark.png`), with the wordmark set
+  in the display face.
+* **Shape and depth.** Pill-shaped buttons and chips, 1 rem radii, rounded cards, and two soft shadows
+  (`shadow-soft` for resting cards, `shadow-lift` for hover and overlays). Content sits in a 90 rem
+  column with consistent gutters (16, 24, and 32 px).
 * **The work comes first.** Covers are big, chrome is quiet, and actions sit in one support card
   rather than being scattered as buttons.
 * **No crypto jargon.** The interface says "your own wallet" and "Send to wallet", and never shows
   token names, gas, or chain IDs. On-chain records are offered as "On record ↗" links.
-* **Two temperatures.** Hot Kudos are **ember** (warm orange) and Cold Kudos are **glacier**
+* **Two temperatures.** Hot Kudos are **coral** (warm) and Cold Kudos are **glacier**
   (cool blue). Those are the only two "money" colours, and they're always paired with their marks
   ✺ and ❄.
 * **No charts of value over time.** No balances in big numbers or green and red. Kudos show up as
@@ -236,8 +259,9 @@ skaddosh is for original human creative work.
 | Phase | Scope | Status |
 |---|---|---|
 | **1: Foundations** | Hot/Cold ledger, giving to pieces and projects, backing with stage weights, milestones and releases, returns with caps, cancel-and-thaw, 48-hour change of heart, weekly allowance, project pages, process log, open roles, follows, reputation signals, Discover modes, wallet page, AI disclosure | Done |
-| **2: Ownership** | Gallery and mediums, new identity, contributor agreements and splits, licences and certificates, identity verification, Kudos as an ERC-20 on Base, CreativeRegistry attestations, mobile Explore, Project, Kudos, and Verify | **This change** |
-| 3: Community | Critique threads and monthly prompts per medium, stewards, project↔piece linking | Next |
+| 2: Ownership | Gallery and mediums, new identity, contributor agreements and splits, licences and certificates, identity verification, Kudos as an ERC-20 on Base, CreativeRegistry attestations, mobile Explore, Project, Kudos, and Verify | Done |
+| **3: Redesign and Trips** | New identity from the brand mark, landing page, command-palette search, Create menu, floating mobile tab bar, trip planning with OpenRouteService and Leaflet, trips on project pages and in the app | **This change** |
+| 4: Community | Critique threads and monthly prompts per medium, stewards, project↔piece linking | Next |
 | 4: Trust | Automatic thaw for dormant projects (no update in 90 days), reports and moderation, weighting new accounts' Kudos lower in reputation | Planned |
 | 5: Sustainability | Creator payouts (KYC, region rules, legal review), memberships for released projects, mobile parity | Planned |
 

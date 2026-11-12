@@ -19,7 +19,8 @@ repository is named `skadoosh`; internal packages intentionally use the
 
 Read `ARCHITECTURE.md` before changing boundaries or data flow, `docs/PRODUCT.md` /
 `docs/KUDOS.md` before changing product surfaces or anything that moves Kudos, and `docs/CHAIN.md` /
-`docs/IDENTITY.md` before touching contracts, chain operations, or verification.
+`docs/IDENTITY.md` before touching contracts, chain operations, or verification, and `docs/TRIPS.md` before
+changing trips or OpenRouteService calls.
 
 ## Commands
 
@@ -48,3 +49,5 @@ Copy `.env.example` to `.env` before commands that require services.
   changing contracts, regenerate the ABI (`contracts:abi`) and keep `docs/CHAIN.md` current.
 - Never store identity documents or selfies, and never put PII on-chain (hashes and HMAC refs only).
 - Giving or backing must never grant ownership. Rights come only from licences and contributor agreements.
+- Call OpenRouteService only from the server (`packages/api/src/lib/ors.ts`). Never expose `ORS_API_KEY`
+  to a client, and keep the hosted-API limits in `trip-planning.ts` and `docs/TRIPS.md` in sync.

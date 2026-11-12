@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Trips** ([docs/TRIPS.md](docs/TRIPS.md)): plan journeys on a Leaflet map, with place search and
+  pin naming, real routes and per-leg travel times for seven travel modes, days, stay times, notes,
+  drag-and-drop ordering, **Best order**, private, link-only, or public sharing, copying public trips,
+  GPX export, and links to projects. Routing comes from OpenRouteService through a server-side
+  client, with a per-trip route cache, rate limits, and plain-language errors. Trips still work
+  without a key, using straight-line legs. Includes migration `0003_trips` with three demo trips,
+  `/trips` and `/trips/:id`, a "The journey" section on project pages, trips in Studio, and a
+  Trips tab in the app.
+- A complete redesign:
+  - A new identity built from the brand mark: paper with violet ink, the violet → coral → amber
+    gradient, Bricolage Grotesque for display, pill buttons, and soft depth.
+  - A landing page for visitors, with the gallery at `/explore`.
+  - A new header with ⌘K command-palette search, a Create menu, and an account menu that holds
+    language and theme.
+  - A floating mobile tab bar, a site footer, and redesigned auth pages with a brand panel.
+  - Consistent widths and headings across Explore, Read, Studio, and project pages.
+
 - Gallery and ownership release ([docs/RESEARCH.md](docs/RESEARCH.md)): appreciation, backing,
   licensing, and contribution are now four distinct, clearly explained ways to support work, and
   Kudos never grant ownership.
