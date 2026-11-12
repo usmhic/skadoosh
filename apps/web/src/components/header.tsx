@@ -116,7 +116,9 @@ export function Header() {
           {session ? (
             <>
               <WalletChip />
-              <CreateMenu />
+              <div className="hidden md:block">
+                <CreateMenu />
+              </div>
               <NotificationsDropdown />
               <UserMenu name={session.user.name ?? "Your account"} email={session.user.email ?? ""} image={meUser?.image ?? null} username={meUser?.username} />
             </>

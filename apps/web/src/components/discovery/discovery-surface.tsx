@@ -128,11 +128,11 @@ export function DiscoverySurface({
   const rtl = lang === "ar";
 
   return (
-    <div className="mx-auto w-full max-w-[100rem] px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
-      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+    <div className="mx-auto w-full max-w-[90rem] px-4 pb-16 pt-8 sm:px-6 sm:pt-12 lg:px-8">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Discover</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <h1 className="font-display text-4xl tracking-tight sm:text-5xl">Read</h1>
+          <p className="mt-2 max-w-xl text-pretty text-muted-foreground">
             {interestFilter.length
               ? `Tuned to ${interestFilter
                   .slice(0, 3)
@@ -406,7 +406,7 @@ function WorkCard({
         <h2
           className={cn(
             "text-base font-bold leading-snug text-foreground",
-            originalLang === "ar" ? "font-arabic" : "font-display italic",
+            originalLang === "ar" ? "font-arabic" : "font-display",
           )}
           dir={originalLang === "ar" ? "rtl" : "ltr"}
         >
@@ -453,7 +453,7 @@ function WorkCard({
         <div className="flex size-5 items-center justify-center rounded-full bg-muted text-[0.6rem] font-bold">
           {work.creator?.name?.charAt(0) ?? "?"}
         </div>
-        <span className={rtl ? "font-arabic" : "font-mono"}>
+        <span className={rtl ? "font-arabic" : "font-medium"}>
           {work.creator?.name}
         </span>
         {work.kudosCount ? (

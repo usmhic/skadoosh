@@ -147,7 +147,7 @@ function AgreementDialog({ id, onClose }: { id: string; onClose: () => void }) {
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-xl">
         <DialogHeader>
-          <DialogTitle className="font-display text-3xl font-normal">Contributor agreement</DialogTitle>
+          <DialogTitle className="font-display text-2xl">Contributor agreement</DialogTitle>
           <DialogDescription>Both people accept this exact text. Its fingerprint is recorded so it can&apos;t change later.</DialogDescription>
         </DialogHeader>
         {agreement.data ? (
@@ -196,7 +196,7 @@ export function ContributeDialog({
     >
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle className="font-display text-3xl font-normal">Offer to contribute</DialogTitle>
+          <DialogTitle className="font-display text-2xl">Offer to contribute</DialogTitle>
           <DialogDescription>
             Describe what you&apos;d do. If the creator accepts, you&apos;re credited on the project, and any share you agree on is
             paid automatically from what it earns.

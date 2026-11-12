@@ -94,7 +94,7 @@ export default function HowItWorksPage() {
           </p>
         </div>
         <div>
-          <span className="font-display text-3xl italic text-hot">Aa</span>
+          <span className="font-display text-3xl text-brand">Aa</span>
           <h2 className="mt-4 font-display text-3xl">Original, human work</h2>
           <p className="mt-3 text-sm leading-7 text-muted-foreground">
             AI can help with research, editing, or tools, and creators say so on every work. It can&apos;t be the

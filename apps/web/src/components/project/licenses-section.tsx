@@ -142,7 +142,7 @@ function BuyLicenseDialog({
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-xl">
         <DialogHeader>
-          <DialogTitle className="font-display text-3xl font-normal">{offer.label} licence</DialogTitle>
+          <DialogTitle className="font-display text-2xl">{offer.label} licence</DialogTitle>
           <DialogDescription>
             {offer.priceKudos.toLocaleString()} Kudos. The creator receives it all except a {feePercent}% platform fee, shared
             with their backers and collaborators as agreed.

@@ -75,7 +75,7 @@ function ProjectView({ project, refetch }: { project: PublicProject; refetch: ()
 
   return (
     <div className="pb-24">
-      <div className="mx-auto w-full max-w-[96rem] px-4 pt-6 sm:px-6 lg:px-10">
+      <div className="mx-auto w-full max-w-[90rem] px-4 pt-6 sm:px-6 lg:px-8">
         <div className="relative aspect-[4/3] overflow-hidden rounded-[2rem] bg-muted ring-1 ring-border/60 sm:aspect-[21/9]">
           {project.coverImage ? (
             <img src={project.coverImage} alt="" className="size-full object-cover" />
@@ -124,7 +124,7 @@ function ProjectView({ project, refetch }: { project: PublicProject; refetch: ()
         </header>
       </div>
 
-      <div className="mx-auto mt-14 grid w-full max-w-[96rem] gap-14 px-4 sm:px-6 lg:grid-cols-[minmax(0,1fr)_24rem] lg:px-10">
+      <div className="mx-auto mt-14 grid w-full max-w-[90rem] gap-14 px-4 sm:px-6 lg:grid-cols-[minmax(0,1fr)_24rem] lg:px-8">
         <div className="min-w-0 space-y-20">
           <Section title="The story">
             {project.locked ? (

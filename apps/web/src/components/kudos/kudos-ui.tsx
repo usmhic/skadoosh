@@ -18,7 +18,7 @@ export function KudosMark({
     <span
       aria-hidden="true"
       className={cn(
-        "inline-flex shrink-0 items-center justify-center rounded-full font-display font-semibold italic leading-none",
+        "inline-flex shrink-0 items-center justify-center rounded-full font-display font-bold leading-none",
         temp === "hot" ? "bg-hot text-hot-foreground" : "bg-cold text-cold-foreground",
         size === "xs" && "size-3.5 text-[0.55rem]",
         size === "sm" && "size-4 text-[0.62rem]",

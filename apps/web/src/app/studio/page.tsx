@@ -15,6 +15,7 @@ import {
   BookOpenIcon,
   FolderOpenIcon,
   ImageIcon,
+  MapIcon,
   PencilIcon,
   SparklesIcon,
 } from "lucide-react";
@@ -246,11 +247,51 @@ export default function StudioPage() {
                 ))}
               </Section>
 
+              <StudioTrips />
+
               <LicensesSold />
             </>
           )}
         </div>
       </StudioMain>
+    </div>
+  );
+}
+
+function StudioTrips() {
+  const trips = trpc.trips.mine.useQuery();
+  const list = trips.data ?? [];
+  return (
+    <div className="rounded-xl border border-border bg-card">
+      <div className="flex items-center gap-3 border-b border-border px-5 py-3.5">
+        <div className="flex size-8 items-center justify-center rounded-lg bg-muted">
+          <MapIcon className="size-4 text-muted-foreground" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold">Trips</p>
+          <p className="text-xs text-muted-foreground">{list.length} trip{list.length !== 1 ? "s" : ""}</p>
+        </div>
+        <Button asChild size="sm" variant="outline" className="h-8">
+          <Link href="/trips">Open trips</Link>
+        </Button>
+      </div>
+      <div className="divide-y divide-border/60">
+        {list.length ? (
+          list.slice(0, 5).map((t) => (
+            <div key={t.id} className="px-2 py-1">
+              <ItemRow
+                href={`/trips/${t.id}`}
+                accent={t.accentColor}
+                title={t.title}
+                meta={`${t.stopCount} stop${t.stopCount === 1 ? "" : "s"}${t.from ? ` · ${t.from}${t.to ? ` → ${t.to}` : ""}` : ""}`}
+                badge={{ label: t.visibility === "public" ? "Public" : t.visibility === "unlisted" ? "Link only" : "Private", published: t.visibility === "public" }}
+              />
+            </div>
+          ))
+        ) : (
+          <p className="py-10 text-center text-sm text-muted-foreground">No trips yet. Plan the journey behind your next piece.</p>
+        )}
+      </div>
     </div>
   );
 }

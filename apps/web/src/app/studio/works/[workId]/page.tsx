@@ -204,7 +204,7 @@ export default function WorkEditorPage({ params }: { params: Promise<{ workId: s
           dir={edRtl ? "rtl" : "ltr"}
           placeholder={edRtl ? "عنوان العمل..." : "Work title..."}
           className={cn("flex-1 border-transparent shadow-none focus-visible:ring-0 bg-transparent px-2 text-base font-semibold",
-            edRtl ? "font-arabic text-right" : "font-display italic")}
+            edRtl ? "font-arabic text-right" : "font-display")}
         />
 
         <div className="hidden items-center gap-2 sm:flex">
