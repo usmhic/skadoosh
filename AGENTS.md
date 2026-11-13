@@ -13,10 +13,14 @@ repository is named `skadoosh`; internal packages intentionally use the
 - `packages/api`: tRPC routers and shared API types.
 - `packages/auth`: Better Auth integration.
 - `packages/db`: Drizzle schema, migration, and seed data.
+- `packages/contracts`: Foundry contracts (`KudosToken`, `CreativeRegistry`), tests, deploy script,
+  and the generated ABI. Run its tools with `pnpm --filter @skaddosh/contracts contracts:<build|test|abi>`.
 - `packages/i18n` and `packages/ui`: shared language and UI primitives.
 
-Read `ARCHITECTURE.md` before changing boundaries or data flow, and `docs/PRODUCT.md` /
-`docs/KUDOS.md` before changing product surfaces or anything that moves Kudos.
+Read `ARCHITECTURE.md` before changing boundaries or data flow, `docs/PRODUCT.md` /
+`docs/KUDOS.md` before changing product surfaces or anything that moves Kudos, and `docs/CHAIN.md` /
+`docs/IDENTITY.md` before touching contracts, chain operations, or verification, and `docs/TRIPS.md` before
+changing trips or OpenRouteService calls.
 
 ## Commands
 
@@ -41,3 +45,9 @@ Copy `.env.example` to `.env` before commands that require services.
 - Update `.env.example`, documentation, and tests with public behavior.
 - Move Kudos only through `packages/api/src/lib/kudos-ledger.ts` inside a transaction, so every
   balance change has a ledger row. Keep `kudos-economy.ts`, its tests, and `docs/KUDOS.md` in sync.
+- Chain writes go through the `chain_operation` queue (`lib/chain-ops.ts`), never directly. After
+  changing contracts, regenerate the ABI (`contracts:abi`) and keep `docs/CHAIN.md` current.
+- Never store identity documents or selfies, and never put PII on-chain (hashes and HMAC refs only).
+- Giving or backing must never grant ownership. Rights come only from licences and contributor agreements.
+- Call OpenRouteService only from the server (`packages/api/src/lib/ors.ts`). Never expose `ORS_API_KEY`
+  to a client, and keep the hosted-API limits in `trip-planning.ts` and `docs/TRIPS.md` in sync.

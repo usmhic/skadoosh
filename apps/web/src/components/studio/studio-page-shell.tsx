@@ -14,14 +14,14 @@ export function StudioHero({
   actions?: ReactNode;
 }) {
   return (
-    <section className="border-b border-border bg-card/60 px-4 py-5 sm:px-6">
-      <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <section className="mx-auto w-full max-w-[90rem] px-4 pb-2 pt-8 sm:px-6 sm:pt-12 lg:px-8">
+      <div className="flex w-full flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+            <h1 className="font-display text-4xl tracking-tight sm:text-5xl">{title}</h1>
             {badge ? <Badge variant="outline">{badge}</Badge> : null}
           </div>
-          <p className="mt-1 max-w-3xl text-sm text-muted-foreground">{description}</p>
+          <p className="mt-2 max-w-3xl text-pretty text-muted-foreground">{description}</p>
         </div>
         {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
       </div>
@@ -37,7 +37,7 @@ export function StudioMain({
   wide?: boolean;
 }) {
   return (
-    <main className={cn("w-full px-4 py-6 sm:px-6", !wide && "max-w-none")}>
+    <main className={cn("mx-auto w-full px-4 py-6 sm:px-6 lg:px-8", wide ? "max-w-[90rem]" : "max-w-5xl")}>
       {children}
     </main>
   );

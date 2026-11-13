@@ -17,6 +17,12 @@ import {
   type BackingTerms,
   type OpenRole,
 } from "@/components/studio/project-kudos-fields";
+import {
+  CollaboratorsPanel,
+  LicensingPanel,
+  MediumPicker,
+} from "@/components/studio/project-ownership-panels";
+import type { Medium } from "@skaddosh/db/schema";
 import { Button } from "@skaddosh/ui/components/ui/button";
 import { ConfirmDialog } from "@skaddosh/ui/components/confirm-dialog";
 import { Input } from "@skaddosh/ui/components/ui/input";
@@ -66,6 +72,7 @@ export default function ProjectEditorPage({
   const [repoUrl, setRepoUrl] = useState("");
   const [tagInput, setTagInput] = useState("");
   const [tags, setTags] = useState<string[]>([]);
+  const [medium, setMedium] = useState<Medium>("other");
   const [accentColor, setAccentColor] = useState("#6366f1");
   const [access, setAccess] = useState<AccessControlValue>({
     visibility: "public",
@@ -96,6 +103,7 @@ export default function ProjectEditorPage({
     setUrl(project.url ?? "");
     setRepoUrl(project.repoUrl ?? "");
     setTags(project.tags);
+    setMedium(project.medium as Medium);
     setAccentColor(project.accentColor);
     setAccess({
       visibility: project.visibility,
@@ -142,6 +150,7 @@ export default function ProjectEditorPage({
           url: url.trim() || null,
           repoUrl: repoUrl.trim() || null,
           tags,
+          medium,
           accentColor,
           visibility: access.visibility,
           unlockMethod: access.unlockMethod,
@@ -174,6 +183,7 @@ export default function ProjectEditorPage({
       url,
       repoUrl,
       tags,
+      medium,
       accentColor,
       access,
       update,
@@ -346,6 +356,8 @@ export default function ProjectEditorPage({
             </div>
           </div>
 
+          <MediumPicker value={medium} onChange={setMedium} />
+
           {/* Tags */}
           <div className="space-y-2">
             <Label>Tags</Label>
@@ -458,6 +470,10 @@ export default function ProjectEditorPage({
           <div className="border-t border-border pt-6">
             <OpenRolesField value={openRoles} onChange={setOpenRoles} />
           </div>
+
+          <CollaboratorsPanel projectId={projectId} published={published} />
+
+          <LicensingPanel projectId={projectId} />
 
           {/* Originality */}
           <HumanMadeFields

@@ -50,6 +50,12 @@ export const usersRouter = router({
       return { ok: true };
     }),
 
+  /** Mark the welcome flow as done so the header stops nudging. */
+  completeOnboarding: protectedProcedure.mutation(async ({ ctx }) => {
+    await db.update(user).set({ onboardingCompleted: true, updatedAt: new Date() }).where(eq(user.id, ctx.session.user.id));
+    return { ok: true };
+  }),
+
   getSettings: protectedProcedure.query(async ({ ctx }) => {
     const [s] = await db.select().from(userSettings)
       .where(eq(userSettings.userId, ctx.session.user.id)).limit(1);

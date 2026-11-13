@@ -27,7 +27,7 @@ function AppleIcon() {
   );
 }
 
-export function SsoButtons({ redirectTo = "/read" }: { redirectTo?: string }) {
+export function SsoButtons({ redirectTo = "/" }: { redirectTo?: string }) {
   const { t } = useTranslation();
   const router = useRouter();
   const [loading, setLoading] = useState<"google" | "apple" | null>(null);

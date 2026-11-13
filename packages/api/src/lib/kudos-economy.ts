@@ -21,6 +21,13 @@ export const KUDOS = {
   RETURN_CAP_MAX_PERCENT: 300,
   CHANGE_OF_HEART_MS: 48 * 60 * 60 * 1000,
   MAX_MILESTONES: 6,
+  /** Platform fee on licence sales, in basis points (10%). The only fee in the economy. */
+  LICENSE_PLATFORM_FEE_BPS: 1_000,
+  /** Contributors can share at most 90% of the creator side; the creator always keeps 10%. */
+  MAX_CONTRIBUTOR_SPLIT_BPS: 9_000,
+  /** Bounds for one on-chain export (whole Kudos). */
+  EXPORT_MIN: 1,
+  EXPORT_MAX: 1_000,
 } as const;
 
 export const PROJECT_STAGES = ["idea", "making", "released", "sustaining", "cancelled"] as const;
@@ -199,4 +206,44 @@ export function validateMilestonePlan(milestones: Array<{ releasePercent: number
 export function risingScore(recentDistinctSupporters: number, creatorTotalSupporters: number): number {
   if (recentDistinctSupporters <= 0) return 0;
   return recentDistinctSupporters / Math.sqrt(1 + creatorTotalSupporters / 10);
+}
+
+// ── Licences ─────────────────────────────────────────────────────────────────
+
+/** Platform fee for a licence sale, rounded down so creators keep any remainder. */
+export function licensePlatformFee(price: number, feeBps: number = KUDOS.LICENSE_PLATFORM_FEE_BPS): number {
+  if (price <= 0) return 0;
+  return Math.floor((price * Math.min(10_000, Math.max(0, feeBps))) / 10_000);
+}
+
+// ── Contributor splits ───────────────────────────────────────────────────────
+
+export type ContributorSplit = { id: string; splitBps: number };
+
+/**
+ * Split the creator side of project income between accepted contributors and the creator.
+ * Each contributor gets floor(amount × bps / 10 000); the creator keeps the rest, including rounding.
+ * Total contributor bps is clamped to MAX_CONTRIBUTOR_SPLIT_BPS as a last line of defence.
+ */
+export function splitCreatorShare(
+  amount: number,
+  contributors: ContributorSplit[],
+): { creatorAmount: number; portions: Array<{ id: string; amount: number }> } {
+  if (amount <= 0) return { creatorAmount: 0, portions: [] };
+  let budget: number = KUDOS.MAX_CONTRIBUTOR_SPLIT_BPS;
+  const portions: Array<{ id: string; amount: number }> = [];
+  for (const c of contributors) {
+    const bps = Math.min(Math.max(0, Math.floor(c.splitBps)), budget);
+    budget -= bps;
+    const share = Math.floor((amount * bps) / 10_000);
+    if (share > 0) portions.push({ id: c.id, amount: share });
+  }
+  const paid = portions.reduce((sum, p) => sum + p.amount, 0);
+  return { creatorAmount: amount - paid, portions };
+}
+
+/** Whether adding `newBps` to the already-accepted splits stays within the contributor budget. */
+export function splitFits(acceptedBps: number[], newBps: number): boolean {
+  if (!Number.isInteger(newBps) || newBps < 0) return false;
+  return acceptedBps.reduce((sum, b) => sum + b, 0) + newBps <= KUDOS.MAX_CONTRIBUTOR_SPLIT_BPS;
 }

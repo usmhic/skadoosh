@@ -19,7 +19,7 @@ function VerifyEmailContent() {
     if (!email) return;
     setLoading(true); setError(""); setSent(false);
     try {
-      const res = await authClient.sendVerificationEmail({ email, callbackURL: "/read" });
+      const res = await authClient.sendVerificationEmail({ email, callbackURL: "/welcome" });
       if ((res as { error?: { message?: string } }).error)
         throw new Error((res as { error: { message?: string } }).error.message ?? t("auth.genericError"));
       setSent(true);

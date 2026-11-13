@@ -33,7 +33,7 @@ export default function LoginPage() {
       }
       setError(msg || t("auth.signInFailed"));
     } else {
-      router.push("/read");
+      router.push("/");
     }
   }
 
@@ -81,7 +81,7 @@ export default function LoginPage() {
         </div>
       </div>
 
-      <SsoButtons redirectTo="/read" />
+      <SsoButtons redirectTo="/" />
 
       <p className="mt-6 text-center text-sm text-muted-foreground">
         {t("common.noAccount")} {" "}

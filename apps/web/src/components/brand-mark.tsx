@@ -1,6 +1,14 @@
 import Link from "next/link";
 import { cn } from "@skaddosh/ui/lib/utils";
 
+/** The skaddosh mark (brand asset in public/brand/mark.png). */
+export function LogoMark({ className }: { className?: string }) {
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src="/brand/mark.png" alt="" aria-hidden="true" className={cn("size-7 shrink-0 object-contain", className)} />
+  );
+}
+
 export function BrandMark({
   href = "/",
   compact = false,
@@ -13,22 +21,12 @@ export function BrandMark({
   return (
     <Link
       href={href}
-      className={cn("inline-flex min-w-0 items-center transition-opacity hover:opacity-85", className)}
+      aria-label="skaddosh home"
+      className={cn("inline-flex min-w-0 items-center gap-2 transition-opacity hover:opacity-80", className)}
     >
-      <span className="relative flex size-7 shrink-0 items-center -mr-0.5 justify-center overflow-hidden">
-        <img
-          src="/brand/mark.png"
-          alt=""
-          className="h-full w-full object-contain bg-transparent"
-          aria-hidden="true"
-        />
-      </span>
+      <LogoMark />
       {!compact ? (
-        <span className="flex min-w-0 flex-col leading-none">
-          <span className="truncate font-display text-lg font-semibold tracking-tight text-foreground">
-            skaddosh
-          </span>
-        </span>
+        <span className="truncate font-display text-[1.6rem] leading-none tracking-tight text-foreground">skaddosh</span>
       ) : null}
     </Link>
   );

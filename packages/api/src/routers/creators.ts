@@ -1,7 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { eq, desc, and, or, ilike, isNotNull, ne, sql, gt } from "drizzle-orm";
-import { db, follow, portfolioProfiles, project, projectBacking, user, userSettings, work } from "@skaddosh/db";
+import { db, follow, portfolioProfiles, project, projectBacking, projectContributor, user, userSettings, work } from "@skaddosh/db";
 import { router, publicProcedure, protectedProcedure } from "../trpc";
 import { reputationFor } from "../lib/reputation";
 import { projectCard } from "../lib/project-view";
@@ -73,8 +73,13 @@ export const creatorsRouter = router({
         .where(eq(portfolioProfiles.userId, creator.id)).limit(1);
       const portfolioEnabled = settings?.portfolioEnabled ?? true;
       const viewerId = ctx.session?.user?.id;
-      const creatorRef = { name: creator.name, username: creator.username, image: creator.image };
-      const [reputation, projects, believesIn, [followers], viewerFollow] = await Promise.all([
+      const creatorRef = {
+        name: creator.name,
+        username: creator.username,
+        image: creator.image,
+        verificationStatus: creator.verificationStatus,
+      };
+      const [reputation, projects, believesIn, [followers], viewerFollow, contributesTo] = await Promise.all([
         reputationFor(creator.id),
         db
           .select()
@@ -84,7 +89,7 @@ export const creatorsRouter = router({
         db
           .select({
             p: project,
-            owner: { name: user.name, username: user.username, image: user.image },
+            owner: { name: user.name, username: user.username, image: user.image, verificationStatus: user.verificationStatus },
             backerNumber: projectBacking.backerNumber,
             stageAtBacking: projectBacking.stageAtBacking,
           })
@@ -108,9 +113,28 @@ export const creatorsRouter = router({
               .where(and(eq(follow.followerId, viewerId), eq(follow.creatorId, creator.id)))
               .limit(1)
           : Promise.resolve([]),
+        db
+          .select({
+            p: project,
+            owner: { name: user.name, username: user.username, image: user.image, verificationStatus: user.verificationStatus },
+            role: projectContributor.role,
+          })
+          .from(projectContributor)
+          .innerJoin(project, eq(project.id, projectContributor.projectId))
+          .innerJoin(user, eq(user.id, project.creatorId))
+          .where(
+            and(
+              eq(projectContributor.userId, creator.id),
+              eq(projectContributor.status, "accepted"),
+              eq(project.status, "published"),
+            ),
+          )
+          .limit(24),
       ]);
       return {
         reputation,
+        verified: creator.verificationStatus === "verified",
+        contributesTo: contributesTo.map((row) => ({ ...projectCard(row.p, row.owner), role: row.role })),
         followers: followers?.n ?? 0,
         viewer: { following: viewerFollow.length > 0, isSelf: viewerId === creator.id },
         projects: projects.map((p) => projectCard(p, creatorRef)),

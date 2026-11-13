@@ -34,7 +34,7 @@ export function parseOpenRoles(value: string): OpenRole[] {
 /** Card-sized public view of a project, shared by Discover, profiles, and circles. */
 export function projectCard(
   p: Project,
-  creator: { name: string; username: string | null; image?: string | null },
+  creator: { name: string; username: string | null; image?: string | null; verificationStatus?: string | null },
 ) {
   return {
     kind: "project" as const,
@@ -51,7 +51,13 @@ export function projectCard(
     kudosReceived: p.kudosReceived,
     openRoles: parseOpenRoles(p.openRolesJson).length,
     confidential: p.visibility === "confidential",
-    creator: { name: creator.name, username: creator.username, image: creator.image ?? null },
+    medium: p.medium,
+    creator: {
+      name: creator.name,
+      username: creator.username,
+      image: creator.image ?? null,
+      verified: creator.verificationStatus === "verified",
+    },
     createdAt: p.createdAt,
     updatedAt: p.updatedAt,
   };

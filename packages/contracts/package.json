@@ -1,0 +1,19 @@
+{
+  "name": "@skaddosh/contracts",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Kudos ERC-20 and CreativeRegistry smart contracts (Foundry).",
+  "exports": {
+    "./abi": "./abi/index.ts"
+  },
+  "scripts": {
+    "contracts:build": "forge build --sizes",
+    "contracts:test": "forge test -vvv",
+    "contracts:fmt": "forge fmt --check",
+    "contracts:abi": "node scripts/export-abi.mjs",
+    "contracts:abi:check": "node scripts/export-abi.mjs --check"
+  },
+  "devDependencies": {
+    "@openzeppelin/contracts": "5.6.1"
+  }
+}

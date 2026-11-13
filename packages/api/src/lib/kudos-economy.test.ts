@@ -4,6 +4,9 @@ import {
   KUDOS,
   acceptsBacking,
   canWithdrawBacking,
+  licensePlatformFee,
+  splitCreatorShare,
+  splitFits,
   weightAfterRefund,
   computeReleases,
   deliveredPercent,
@@ -196,5 +199,55 @@ describe("rising score", () => {
   it("favours smaller creators with the same recent support", () => {
     assert.ok(risingScore(8, 5) > risingScore(8, 500));
     assert.equal(risingScore(0, 0), 0);
+  });
+});
+
+describe("licences", () => {
+  it("takes a 10% fee rounded down", () => {
+    assert.equal(licensePlatformFee(150), 15);
+    assert.equal(licensePlatformFee(8), 0);
+    assert.equal(licensePlatformFee(0), 0);
+  });
+});
+
+describe("contributor splits", () => {
+  it("pays contributors their basis points and gives rounding to the creator", () => {
+    const split = splitCreatorShare(101, [
+      { id: "translator", splitBps: 1_500 },
+      { id: "letterer", splitBps: 1_000 },
+    ]);
+    assert.deepEqual(split.portions, [
+      { id: "translator", amount: 15 },
+      { id: "letterer", amount: 10 },
+    ]);
+    assert.equal(split.creatorAmount, 76);
+  });
+
+  it("never lets contributors take more than 90%", () => {
+    const split = splitCreatorShare(100, [
+      { id: "a", splitBps: 6_000 },
+      { id: "b", splitBps: 6_000 },
+    ]);
+    assert.deepEqual(split.portions, [
+      { id: "a", amount: 60 },
+      { id: "b", amount: 30 },
+    ]);
+    assert.equal(split.creatorAmount, 10);
+  });
+
+  it("conserves every Kudo", () => {
+    for (const amount of [1, 7, 99, 1_234]) {
+      const split = splitCreatorShare(amount, [
+        { id: "a", splitBps: 3_333 },
+        { id: "b", splitBps: 1_111 },
+      ]);
+      assert.equal(split.creatorAmount + split.portions.reduce((s, p) => s + p.amount, 0), amount);
+    }
+  });
+
+  it("checks whether a new split fits the budget", () => {
+    assert.equal(splitFits([1_500, 1_000], 6_500), true);
+    assert.equal(splitFits([1_500, 1_000], 6_501), false);
+    assert.equal(splitFits([], -1), false);
   });
 });

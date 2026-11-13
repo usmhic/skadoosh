@@ -3,6 +3,7 @@ import { z } from "zod";
 import { eq, and, desc, asc, ne, sql, inArray } from "drizzle-orm";
 import {
   AI_USAGE,
+  MEDIUMS,
   db,
   follow,
   kudos,
@@ -39,6 +40,8 @@ import {
 } from "../lib/kudos-ledger";
 import { parseAiUsage, parseOpenRoles, projectCard } from "../lib/project-view";
 import { notifyOwnerInbox } from "./portfolios";
+import { enqueueWorkRegistration, processInBackground } from "../lib/chain-ops";
+import { assertVerified } from "../lib/identity";
 
 function parseProject(p: Project) {
   return {
@@ -107,7 +110,10 @@ export const projectsRouter = router({
         conditions.push(sql`${project.backingGoal} > 0`);
       }
       const rows = await db
-        .select({ p: project, creator: { name: user.name, username: user.username, image: user.image } })
+        .select({
+          p: project,
+          creator: { name: user.name, username: user.username, image: user.image, verificationStatus: user.verificationStatus },
+        })
         .from(project)
         .innerJoin(user, eq(project.creatorId, user.id))
         .where(and(...conditions))
@@ -122,7 +128,14 @@ export const projectsRouter = router({
       const [row] = await db
         .select({
           p: project,
-          creator: { id: user.id, name: user.name, username: user.username, image: user.image, bio: user.bio },
+          creator: {
+            id: user.id,
+            name: user.name,
+            username: user.username,
+            image: user.image,
+            bio: user.bio,
+            verificationStatus: user.verificationStatus,
+          },
         })
         .from(project)
         .innerJoin(user, eq(project.creatorId, user.id))
@@ -199,9 +212,17 @@ export const projectsRouter = router({
         accentColor: row.p.accentColor,
         tags: parsed.tags,
         stage: parsed.stage,
+        medium: row.p.medium,
         aiUsage: parsed.aiUsage,
         humanMadeConfirmedAt: row.p.humanMadeConfirmedAt,
-        creator: row.creator,
+        creator: {
+          id: row.creator.id,
+          name: row.creator.name,
+          username: row.creator.username,
+          image: row.creator.image,
+          bio: row.creator.bio,
+          verified: row.creator.verificationStatus === "verified",
+        },
         createdAt: row.p.createdAt,
         updatedAt: row.p.updatedAt,
         lastUpdateAt: updates[0]?.createdAt ?? null,
@@ -342,6 +363,7 @@ export const projectsRouter = router({
         openRoles: z.array(roleSchema).max(8).optional(),
         aiUsage: z.array(z.enum(AI_USAGE)).max(AI_USAGE.length).optional(),
         humanMadeConfirmed: z.boolean().optional(),
+        medium: z.enum(MEDIUMS).optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -364,6 +386,8 @@ export const projectsRouter = router({
             ? existing.humanMadeConfirmedAt ?? new Date()
             : null;
       const status = input.status ?? existing.status;
+      const publishing = status === "published" && existing.status !== "published";
+      if (publishing) await assertVerified(ctx.session.user.id, "publish projects");
       if (status === "published" && !humanMadeConfirmedAt) {
         throw new TRPCError({
           code: "BAD_REQUEST",
@@ -393,10 +417,16 @@ export const projectsRouter = router({
           openRolesJson: input.openRoles !== undefined ? JSON.stringify(input.openRoles) : existing.openRolesJson,
           aiUsageJson: input.aiUsage !== undefined ? JSON.stringify(input.aiUsage) : existing.aiUsageJson,
           humanMadeConfirmedAt,
+          medium: input.medium ?? existing.medium,
           updatedAt: new Date(),
         })
         .where(eq(project.id, input.id));
 
+      // First publication registers the work's content hash with the CreativeRegistry.
+      if (publishing) {
+        const opId = await enqueueWorkRegistration(input.id);
+        if (opId) processInBackground(opId);
+      }
       return { ok: true };
     }),
 

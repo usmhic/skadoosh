@@ -3,54 +3,84 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "@/lib/auth";
+import { trpc } from "@/lib/trpc/provider";
 import { cn } from "@skaddosh/ui/lib/utils";
-import { CompassIcon, PenLineIcon, UsersRoundIcon, WalletIcon, type LucideIcon } from "lucide-react";
+import { BookOpenIcon, CompassIcon, LogInIcon, MapIcon, PenToolIcon, SparklesIcon, WalletIcon, type LucideIcon } from "lucide-react";
+import { CreateMenu } from "@/components/header";
 
-/** Full-screen editors and auth pages have their own chrome. */
-const HIDDEN_PREFIXES = ["/auth", "/studio/works/", "/studio/projects/", "/studio/gallery/", "/portfolio/"];
+/** Full-screen editors, the trip planner, and auth pages have their own chrome. */
+const HIDDEN_PREFIXES = ["/auth", "/welcome", "/studio/works/", "/studio/projects/", "/studio/gallery/", "/portfolio/", "/trips/"];
+
+type Tab = { href: string; label: string; icon: LucideIcon; active: boolean };
 
 export function MobileTabBar() {
   const pathname = usePathname() ?? "/";
   const { data: session } = useSession();
+  const { data: me } = trpc.users.me.useQuery(undefined, { enabled: !!session });
   if (HIDDEN_PREFIXES.some((prefix) => pathname.startsWith(prefix))) return null;
+  const username = (me?.user as { username?: string } | undefined)?.username;
 
-  const tabs: Array<{ href: string; label: string; icon: LucideIcon; active: boolean }> = [
-    { href: "/", label: "Discover", icon: CompassIcon, active: pathname === "/" || pathname.startsWith("/read") || pathname.startsWith("/projects") },
-    { href: "/circles", label: "Circles", icon: UsersRoundIcon, active: pathname.startsWith("/circles") },
-    { href: "/kudos", label: "Kudos", icon: WalletIcon, active: pathname.startsWith("/kudos") },
-    {
-      href: session ? "/studio" : "/auth/signup",
-      label: session ? "Studio" : "Create",
-      icon: PenLineIcon,
-      active: pathname.startsWith("/studio"),
-    },
-  ];
+  const explore: Tab = {
+    href: session ? "/" : "/explore",
+    label: "Explore",
+    icon: CompassIcon,
+    active: (Boolean(session) && pathname === "/") || pathname.startsWith("/explore") || pathname.startsWith("/read") || pathname.startsWith("/projects"),
+  };
+  const trips: Tab = { href: "/trips", label: "Trips", icon: MapIcon, active: pathname === "/trips" };
+  const left = [explore, trips];
+  const right: Tab[] = session
+    ? [
+        { href: "/kudos", label: "Kudos", icon: WalletIcon, active: pathname.startsWith("/kudos") },
+        { href: "/studio", label: "Studio", icon: PenToolIcon, active: pathname.startsWith("/studio") || (Boolean(username) && pathname === `/${username}`) },
+      ]
+    : [
+        { href: "/how-it-works", label: "How it works", icon: BookOpenIcon, active: pathname.startsWith("/how-it-works") },
+        { href: "/auth/login", label: "Sign in", icon: LogInIcon, active: false },
+      ];
 
   return (
     <>
-      <div aria-hidden="true" className="h-16 md:hidden" />
+      <div aria-hidden="true" className="h-[calc(4.5rem+env(safe-area-inset-bottom))] md:hidden" />
       <nav
         aria-label="Primary"
-        className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl md:hidden"
+        className="fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-50 rounded-3xl border border-border/80 bg-background/90 shadow-lift backdrop-blur-xl md:hidden"
       >
-        <ul className="grid h-16 grid-cols-4">
-          {tabs.map(({ href, label, icon: Icon, active }) => (
-            <li key={label}>
-              <Link
-                href={href}
-                aria-current={active ? "page" : undefined}
-                className={cn(
-                  "flex h-full flex-col items-center justify-center gap-1 text-[0.68rem] font-medium",
-                  active ? "text-foreground" : "text-muted-foreground",
-                )}
-              >
-                <Icon className={cn("size-5", active && "text-hot")} />
-                {label}
+        <ul className="grid h-16 grid-cols-5 items-center">
+          {left.map((tab) => (
+            <TabLink key={tab.href} tab={tab} />
+          ))}
+          <li className="flex justify-center">
+            {session ? (
+              <CreateMenu compact />
+            ) : (
+              <Link href="/auth/signup" aria-label="Get started" className="flex size-11 items-center justify-center rounded-full bg-brand text-white shadow-[0_8px_20px_-8px_var(--brand-2)]">
+                <SparklesIcon className="size-5" />
               </Link>
-            </li>
+            )}
+          </li>
+          {right.map((tab) => (
+            <TabLink key={tab.href} tab={tab} />
           ))}
         </ul>
       </nav>
     </>
+  );
+}
+
+function TabLink({ tab: { href, label, icon: Icon, active } }: { tab: Tab }) {
+  return (
+    <li>
+      <Link
+        href={href}
+        aria-current={active ? "page" : undefined}
+        className={cn(
+          "flex h-full flex-col items-center justify-center gap-1 text-[0.66rem] font-medium transition-colors",
+          active ? "text-primary" : "text-muted-foreground",
+        )}
+      >
+        <Icon className="size-5" strokeWidth={active ? 2.3 : 1.8} />
+        {label}
+      </Link>
+    </li>
   );
 }

@@ -17,6 +17,11 @@
  *  projectBacking             a supporter's Cold Kudos position in a project
  *  projectUpdate              public process log / milestone notes
  *  follow                     supporter → creator follow edge
+ *  identityVerification       KYC sessions (status + country only — never documents)
+ *  licenseOffer               per-project licence tiers and prices
+ *  license                    issued licences (immutable terms snapshot + hash)
+ *  projectContributor         consented contributor credits and revenue splits
+ *  chainOperation             idempotent queue of on-chain mints, burns, and attestations
  *  galleryCollection          photo/image collection
  *  contentAccess              confidential-content access requests / kudos unlocks
  *  savedItem                  reader bookmarks of works/projects/gallery collections
@@ -38,6 +43,8 @@ import {
   pgEnum,
   jsonb,
   check,
+  date,
+  doublePrecision,
 } from "drizzle-orm/pg-core";
 
 export const userRoleEnum = pgEnum("user_role", [
@@ -88,6 +95,42 @@ export const projectStageEnum = pgEnum("project_stage", [
 
 export const kudosCurrencyEnum = pgEnum("kudos_currency", ["hot", "cold"]);
 
+export const verificationStatusEnum = pgEnum("verification_status", [
+  "unverified",
+  "pending",
+  "verified",
+  "rejected",
+]);
+
+export const licenseTierEnum = pgEnum("license_tier", ["personal", "commercial", "exclusive"]);
+
+export const contributorStatusEnum = pgEnum("contributor_status", [
+  "requested",
+  "invited",
+  "accepted",
+  "declined",
+  "removed",
+]);
+
+/** OpenRouteService routing profiles we offer, in display order. */
+export const TRAVEL_MODES = [
+  "driving-car",
+  "cycling-regular",
+  "cycling-electric",
+  "cycling-mountain",
+  "foot-walking",
+  "foot-hiking",
+  "wheelchair",
+] as const;
+export type TravelMode = (typeof TRAVEL_MODES)[number];
+export const travelModeEnum = pgEnum("travel_mode", TRAVEL_MODES);
+export const TRIP_VISIBILITIES = ["private", "unlisted", "public"] as const;
+export type TripVisibility = (typeof TRIP_VISIBILITIES)[number];
+export const tripVisibilityEnum = pgEnum("trip_visibility", TRIP_VISIBILITIES);
+export const STOP_KINDS = ["place", "stay", "food", "sight", "transport"] as const;
+export type StopKind = (typeof STOP_KINDS)[number];
+export const stopKindEnum = pgEnum("stop_kind", STOP_KINDS);
+
 export const contentAccessStatusEnum = pgEnum("content_access_status", [
   "pending",
   "approved",
@@ -116,6 +159,16 @@ export const user = pgTable("user", {
   // Hot Kudos: the liquid, spendable balance. Cold Kudos live in project_backing.
   kudosBalance: integer("kudos_balance").notNull().default(25),
   weeklyKudosClaimedAt: timestamp("weekly_kudos_claimed_at", { withTimezone: true }),
+
+  // Identity verification summary (details in identity_verification). No documents are stored.
+  verificationStatus: verificationStatusEnum("verification_status").notNull().default("unverified"),
+  verifiedAt: timestamp("verified_at", { withTimezone: true }),
+  // ISO 3166-1 alpha-2 country of the verified identity document; drives jurisdiction gates.
+  verifiedCountry: text("verified_country"),
+
+  // Self-custody wallet linked by signature (lowercase 0x address).
+  walletAddress: text("wallet_address").unique(),
+  walletLinkedAt: timestamp("wallet_linked_at", { withTimezone: true }),
 });
 
 export const session = pgTable("session", {
@@ -315,6 +368,9 @@ export const project = pgTable(
 
     // ── Kudos & backing ──
     stage: projectStageEnum("stage").notNull().default("making"),
+    // Primary medium for gallery filtering: art, design, software, music, writing, film, games,
+    // photography, research, other.
+    medium: text("medium").notNull().default("other"),
     pitch: text("pitch").notNull().default(""),
     // Cold Kudos goal; 0 means the project is not seeking backers.
     backingGoal: integer("backing_goal").notNull().default(0),
@@ -338,6 +394,7 @@ export const project = pgTable(
     index("project_creator_idx").on(t.creatorId),
     index("project_status_idx").on(t.status),
     index("project_stage_idx").on(t.stage),
+    index("project_medium_idx").on(t.medium),
   ],
 );
 
@@ -442,6 +499,212 @@ export const follow = pgTable(
     uniqueIndex("follow_follower_creator_unique").on(t.followerId, t.creatorId),
     index("follow_creator_idx").on(t.creatorId),
   ],
+);
+
+// ── identity verification ─────────────────────────────────────────────────────
+
+export const identityVerification = pgTable(
+  "identity_verification",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    provider: text("provider").notNull(), // "veriff" | "mock"
+    providerSessionId: text("provider_session_id").notNull(),
+    // pending | verified | rejected | resubmission | expired | abandoned
+    status: text("status").notNull().default("pending"),
+    country: text("country"),
+    reasonCode: text("reason_code"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    decidedAt: timestamp("decided_at", { withTimezone: true }),
+  },
+  (t) => [
+    uniqueIndex("identity_verification_provider_session_unique").on(t.provider, t.providerSessionId),
+    index("identity_verification_user_idx").on(t.userId),
+  ],
+);
+
+// ── licensing ─────────────────────────────────────────────────────────────────
+
+export const licenseOffer = pgTable(
+  "license_offer",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    projectId: text("project_id")
+      .notNull()
+      .references(() => project.id, { onDelete: "cascade" }),
+    tier: licenseTierEnum("tier").notNull(),
+    priceKudos: integer("price_kudos").notNull(),
+    active: boolean("active").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("license_offer_project_tier_unique").on(t.projectId, t.tier)],
+);
+
+/** An issued licence. Rows are legal records: they outlive the project and the accounts. */
+export const license = pgTable(
+  "license",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    certificateCode: text("certificate_code").notNull().unique(),
+    projectId: text("project_id").references(() => project.id, { onDelete: "set null" }),
+    projectTitle: text("project_title").notNull(),
+    creatorId: text("creator_id").references(() => user.id, { onDelete: "set null" }),
+    creatorName: text("creator_name").notNull(),
+    buyerId: text("buyer_id").references(() => user.id, { onDelete: "set null" }),
+    licenseeName: text("licensee_name").notNull(),
+    tier: licenseTierEnum("tier").notNull(),
+    priceKudos: integer("price_kudos").notNull(),
+    platformFeeKudos: integer("platform_fee_kudos").notNull().default(0),
+    termsVersion: text("terms_version").notNull(),
+    // SHA-256 (hex) of the exact terms text the licensee accepted.
+    termsHash: text("terms_hash").notNull(),
+    status: text("status").notNull().default("active"), // active | revoked
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+  },
+  (t) => [
+    index("license_project_idx").on(t.projectId),
+    index("license_buyer_idx").on(t.buyerId),
+  ],
+);
+
+// ── contributors ──────────────────────────────────────────────────────────────
+
+export const projectContributor = pgTable(
+  "project_contributor",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    projectId: text("project_id")
+      .notNull()
+      .references(() => project.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    role: text("role").notNull(),
+    contribution: text("contribution").notNull().default(""),
+    // Share of the creator's project income, in basis points (0 = credit only).
+    splitBps: integer("split_bps").notNull().default(0),
+    // Both parties accepted the co-ownership template (copyright transfers need a signed instrument).
+    coOwner: boolean("co_owner").notNull().default(false),
+    status: contributorStatusEnum("status").notNull(),
+    initiatedBy: text("initiated_by").notNull(), // "creator" | "contributor"
+    agreementVersion: text("agreement_version").notNull(),
+    // Exact agreement text both parties accept, and its SHA-256 (hex).
+    agreementText: text("agreement_text").notNull(),
+    agreementHash: text("agreement_hash").notNull(),
+    acceptedAt: timestamp("accepted_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("project_contributor_project_user_unique").on(t.projectId, t.userId),
+    index("project_contributor_user_idx").on(t.userId),
+  ],
+);
+
+// ── on-chain operations ───────────────────────────────────────────────────────
+
+/**
+ * Every on-chain action goes through this table first, keyed by (kind, refId), so retries and the
+ * reconcile job can never mint, burn, or attest twice.
+ */
+export const chainOperation = pgTable(
+  "chain_operation",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    // export | import | register_work | record_contribution | issue_license | revoke_license
+    kind: text("kind").notNull(),
+    refId: text("ref_id").notNull(),
+    userId: text("user_id").references(() => user.id, { onDelete: "set null" }),
+    amount: integer("amount"),
+    // pending | submitting | submitted | confirmed | failed
+    status: text("status").notNull().default("pending"),
+    txHash: text("tx_hash"),
+    error: text("error"),
+    attempts: integer("attempts").notNull().default(0),
+    payload: jsonb("payload"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("chain_operation_kind_ref_unique").on(t.kind, t.refId),
+    index("chain_operation_status_idx").on(t.status),
+    index("chain_operation_user_idx").on(t.userId),
+  ],
+);
+
+// ── trips ─────────────────────────────────────────────────────────────────────
+// A trip is an ordered list of stops plus the last route OpenRouteService computed for them.
+// The route is a cache: `routeKey` hashes the mode and stop coordinates it was computed for,
+// so the API knows when it's stale without calling ORS again (docs/TRIPS.md).
+
+export const trip = pgTable(
+  "trip",
+  {
+    id: text("id").primaryKey(),
+    ownerId: text("owner_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    // Optional: the creative project this journey belongs to (field research, a tour, a shoot).
+    projectId: text("project_id").references(() => project.id, { onDelete: "set null" }),
+    title: text("title").notNull().default(""),
+    summary: text("summary").notNull().default(""),
+    mode: travelModeEnum("mode").notNull().default("driving-car"),
+    visibility: tripVisibilityEnum("visibility").notNull().default("private"),
+    accentColor: text("accent_color").notNull().default("#6d4aff"),
+    startDate: date("start_date"),
+    // Cached route: [[lng, lat], …], per-leg totals, and overall totals.
+    routeGeometry: jsonb("route_geometry").$type<Array<[number, number]>>(),
+    routeLegs: jsonb("route_legs").$type<Array<{ distance: number; duration: number }>>(),
+    routeDistanceM: integer("route_distance_m"),
+    routeDurationS: integer("route_duration_s"),
+    routeKey: text("route_key"),
+    routeError: text("route_error"),
+    routeComputedAt: timestamp("route_computed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("trip_owner_idx").on(t.ownerId),
+    index("trip_visibility_idx").on(t.visibility, t.updatedAt),
+    index("trip_project_idx").on(t.projectId),
+  ],
+);
+
+export const tripStop = pgTable(
+  "trip_stop",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    tripId: text("trip_id")
+      .notNull()
+      .references(() => trip.id, { onDelete: "cascade" }),
+    position: integer("position").notNull(),
+    name: text("name").notNull(),
+    address: text("address").notNull().default(""),
+    lat: doublePrecision("lat").notNull(),
+    lng: doublePrecision("lng").notNull(),
+    kind: stopKindEnum("kind").notNull().default("place"),
+    day: integer("day").notNull().default(1),
+    stayMinutes: integer("stay_minutes").notNull().default(0),
+    notes: text("notes").notNull().default(""),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("trip_stop_trip_position_idx").on(t.tripId, t.position)],
 );
 
 // ── kudos ledger ──────────────────────────────────────────────────────────────
@@ -817,6 +1080,24 @@ export const projectUpdateRelations = relations(projectUpdate, ({ one }) => ({
   author: one(user, { fields: [projectUpdate.authorId], references: [user.id] }),
 }));
 
+export const identityVerificationRelations = relations(identityVerification, ({ one }) => ({
+  user: one(user, { fields: [identityVerification.userId], references: [user.id] }),
+}));
+
+export const licenseOfferRelations = relations(licenseOffer, ({ one }) => ({
+  project: one(project, { fields: [licenseOffer.projectId], references: [project.id] }),
+}));
+
+export const licenseRelations = relations(license, ({ one }) => ({
+  project: one(project, { fields: [license.projectId], references: [project.id] }),
+  buyer: one(user, { fields: [license.buyerId], references: [user.id] }),
+}));
+
+export const projectContributorRelations = relations(projectContributor, ({ one }) => ({
+  project: one(project, { fields: [projectContributor.projectId], references: [project.id] }),
+  user: one(user, { fields: [projectContributor.userId], references: [user.id] }),
+}));
+
 export const kudosLedgerRelations = relations(kudosLedger, ({ one }) => ({
   user: one(user, { fields: [kudosLedger.userId], references: [user.id] }),
 }));
@@ -905,6 +1186,29 @@ export type ProjectBacking = typeof projectBacking.$inferSelect;
 export type ProjectUpdate = typeof projectUpdate.$inferSelect;
 export type Follow = typeof follow.$inferSelect;
 export type KudosLedgerEntry = typeof kudosLedger.$inferSelect;
+export type IdentityVerification = typeof identityVerification.$inferSelect;
+export type LicenseOffer = typeof licenseOffer.$inferSelect;
+export type License = typeof license.$inferSelect;
+export type ProjectContributor = typeof projectContributor.$inferSelect;
+export type ChainOperation = typeof chainOperation.$inferSelect;
+export type VerificationStatus = "unverified" | "pending" | "verified" | "rejected";
+export type LicenseTier = "personal" | "commercial" | "exclusive";
+export type ContributorStatus = "requested" | "invited" | "accepted" | "declined" | "removed";
+
+/** Gallery mediums. Projects pick one; writing pieces are always "writing". */
+export const MEDIUMS = [
+  "art",
+  "design",
+  "software",
+  "music",
+  "writing",
+  "film",
+  "games",
+  "photography",
+  "research",
+  "other",
+] as const;
+export type Medium = (typeof MEDIUMS)[number];
 
 export type UserRole = "reader" | "creator" | "publisher";
 
@@ -939,7 +1243,13 @@ export type KudosLedgerKind =
   | "refund"
   | "unlock_spend"
   | "unlock_earn"
-  | "comment";
+  | "comment"
+  | "license_spend"
+  | "license_earn"
+  | "contributor_share"
+  | "export_onchain"
+  | "export_refund"
+  | "import_onchain";
 
 /** Ways a creator may have used AI in their process. The work itself must be human-made. */
 export const AI_USAGE = ["research", "editing", "translation", "tools", "reference"] as const;

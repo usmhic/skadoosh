@@ -74,7 +74,7 @@ export default function SignupPage() {
         </div>
       </div>
 
-      <SsoButtons redirectTo="/read" />
+      <SsoButtons redirectTo="/welcome" />
 
       <p className="mt-6 text-center text-sm text-muted-foreground">
         {t("common.haveAccount")} {" "}

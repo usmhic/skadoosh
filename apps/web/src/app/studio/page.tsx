@@ -4,6 +4,9 @@ import Link from "next/link";
 import { useSession } from "@/lib/auth";
 import { trpc } from "@/lib/trpc/provider";
 import { CreateContentMenu } from "@/components/studio/create-content-menu";
+import { LicensesSold, StudioInbox } from "@/components/studio/studio-inbox";
+import { KudosMark } from "@/components/kudos/kudos-ui";
+import { mediumLabel } from "@/lib/mediums";
 import { StudioHero, StudioMain, StudioSectionSkeleton } from "@/components/studio/studio-page-shell";
 import { Button } from "@skaddosh/ui/components/ui/button";
 import { Badge } from "@skaddosh/ui/components/ui/badge";
@@ -12,6 +15,7 @@ import {
   BookOpenIcon,
   FolderOpenIcon,
   ImageIcon,
+  MapIcon,
   PencilIcon,
   SparklesIcon,
 } from "lucide-react";
@@ -137,7 +141,7 @@ export default function StudioPage() {
     <div className="min-h-full">
       <StudioHero
         title={session?.user.name ? `${session.user.name}'s Studio` : "Studio"}
-        description="Write, build, and shoot — your full creative space."
+        description="Make things, show the process, and keep track of who helped."
         actions={<CreateContentMenu buttonLabel="New" />}
       />
 
@@ -155,11 +159,7 @@ export default function StudioPage() {
             label="projects live"
           />
           <Stat
-            icon={
-              <span className="inline-flex size-4 items-center justify-center rounded-full border border-muted-foreground font-display text-[0.6rem] font-semibold italic leading-none text-muted-foreground">
-                K
-              </span>
-            }
+            icon={<KudosMark size="xs" />}
             value={totalKudos}
             label="kudos"
           />
@@ -169,6 +169,8 @@ export default function StudioPage() {
             label="drafts"
           />
         </div>
+
+        <StudioInbox />
 
         {/* Three content sections */}
         <div className="space-y-4">
@@ -217,7 +219,7 @@ export default function StudioPage() {
                       href={`/studio/projects/${p.id}`}
                       accent={p.accentColor}
                       title={p.title || "Untitled project"}
-                      meta={p.tags.join(", ") || "No tags"}
+                      meta={[mediumLabel(p.medium), ...p.tags.slice(0, 3)].join(" · ")}
                       badge={{ label: p.status === "published" ? "Published" : "Draft", published: p.status === "published" }}
                     />
                   </div>
@@ -244,10 +246,52 @@ export default function StudioPage() {
                   </div>
                 ))}
               </Section>
+
+              <StudioTrips />
+
+              <LicensesSold />
             </>
           )}
         </div>
       </StudioMain>
+    </div>
+  );
+}
+
+function StudioTrips() {
+  const trips = trpc.trips.mine.useQuery();
+  const list = trips.data ?? [];
+  return (
+    <div className="rounded-xl border border-border bg-card">
+      <div className="flex items-center gap-3 border-b border-border px-5 py-3.5">
+        <div className="flex size-8 items-center justify-center rounded-lg bg-muted">
+          <MapIcon className="size-4 text-muted-foreground" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold">Trips</p>
+          <p className="text-xs text-muted-foreground">{list.length} trip{list.length !== 1 ? "s" : ""}</p>
+        </div>
+        <Button asChild size="sm" variant="outline" className="h-8">
+          <Link href="/trips">Open trips</Link>
+        </Button>
+      </div>
+      <div className="divide-y divide-border/60">
+        {list.length ? (
+          list.slice(0, 5).map((t) => (
+            <div key={t.id} className="px-2 py-1">
+              <ItemRow
+                href={`/trips/${t.id}`}
+                accent={t.accentColor}
+                title={t.title}
+                meta={`${t.stopCount} stop${t.stopCount === 1 ? "" : "s"}${t.from ? ` · ${t.from}${t.to ? ` → ${t.to}` : ""}` : ""}`}
+                badge={{ label: t.visibility === "public" ? "Public" : t.visibility === "unlisted" ? "Link only" : "Private", published: t.visibility === "public" }}
+              />
+            </div>
+          ))
+        ) : (
+          <p className="py-10 text-center text-sm text-muted-foreground">No trips yet. Plan the journey behind your next piece.</p>
+        )}
+      </div>
     </div>
   );
 }

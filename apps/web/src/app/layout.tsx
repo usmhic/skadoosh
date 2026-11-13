@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Amiri, Cairo, Fraunces, JetBrains_Mono, Manrope } from "next/font/google";
+import { Amiri, Bricolage_Grotesque, Cairo, Geist, Geist_Mono, Newsreader } from "next/font/google";
 import { Providers } from "./providers";
 import { MobileTabBar } from "@/components/mobile-tab-bar";
 import "@skaddosh/ui/globals.css";
@@ -12,15 +12,14 @@ const cairo = Cairo({
   variable: "--font-cairo",
   display:  "swap",
 });
-const manrope = Manrope({
-  weight: ["400", "500", "600", "700", "800"],
+const geist = Geist({
   subsets: ["latin"],
-  variable: "--font-manrope",
+  variable: "--font-geist",
   display: "swap",
 });
-const jetbrainsMono = JetBrains_Mono({
+const geistMono = Geist_Mono({
   subsets: ["latin"],
-  variable: "--font-jetbrains-mono",
+  variable: "--font-geist-mono",
   display: "swap",
 });
 const amiri = Amiri({
@@ -30,11 +29,17 @@ const amiri = Amiri({
   variable: "--font-amiri",
   display:  "swap",
 });
-const fraunces = Fraunces({
-  weight:  ["500", "600", "700"],
-  style:   ["normal", "italic"],
+// Display face for headlines: a variable grotesk with optical sizes, to match the brand mark.
+const bricolage = Bricolage_Grotesque({
   subsets: ["latin"],
-  variable: "--font-fraunces",
+  variable: "--font-bricolage",
+  display:  "swap",
+});
+// Long-form reading face for stories, essays, and project write-ups.
+const newsreader = Newsreader({
+  subsets: ["latin"],
+  style:   ["normal", "italic"],
+  variable: "--font-newsreader",
   display:  "swap",
 });
 
@@ -43,9 +48,9 @@ export const metadata: Metadata = {
   applicationName: "skaddosh",
   title: {
     template: "%s | skaddosh",
-    default: "skaddosh - multilingual publishing, reading, and creator portfolios",
+    default: "skaddosh — original work, made by people",
   },
-  description: "Discover stories, essays, poems, articles, projects, and creator portfolios across Arabic, English, French, and Spanish.",
+  description: "A gallery of original, human-made creative work. Appreciate it with Kudos, back it early, license it, and contribute to it.",
   keywords: [
     "skaddosh",
     "multilingual publishing",
@@ -85,8 +90,8 @@ export const metadata: Metadata = {
     locale: "en_US",
     alternateLocale: ["ar_MA", "fr_FR", "es_ES"],
     siteName: "skaddosh",
-    title: "skaddosh - multilingual publishing and creator portfolios",
-    description: "Read, publish, support, and discover creative work across four languages.",
+    title: "skaddosh — original work, made by people",
+    description: "Discover, support, license, and collaborate on original creative work.",
     url: "/",
     images: [
       {
@@ -99,8 +104,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "skaddosh - multilingual publishing and creator portfolios",
-    description: "Read, publish, support, and discover creative work across four languages.",
+    title: "skaddosh — original work, made by people",
+    description: "Discover, support, license, and collaborate on original creative work.",
     images: ["/brand/social-card.png"],
   },
   robots: {
@@ -119,7 +124,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning
-      className={[manrope.variable, jetbrainsMono.variable, cairo.variable, amiri.variable, fraunces.variable].join(" ")}>
+      className={[geist.variable, geistMono.variable, cairo.variable, amiri.variable, bricolage.variable, newsreader.variable].join(" ")}>
       <body className="min-h-screen bg-background font-sans antialiased">
         <Providers>
           {children}
