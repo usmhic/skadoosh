@@ -7,21 +7,20 @@ import { Button } from "@skaddosh/ui/components/ui/button";
 import {
   ArrowRightIcon,
   BadgeCheckIcon,
+  CameraIcon,
   FileBadgeIcon,
+  FolderHeartIcon,
   HandHeartIcon,
   HandshakeIcon,
-  MapIcon,
   MapPinIcon,
-  NotebookPenIcon,
-  RouteIcon,
   SproutIcon,
-  UsersIcon,
 } from "lucide-react";
 import { Gallery, GallerySkeleton } from "@/components/gallery/gallery-tile";
 import { GenerativeCover } from "@/components/gallery/generative-cover";
-import { RoutePreview } from "@/components/trips/route-preview";
+import { RoutePreview } from "@/components/travel/route-preview";
+import { CollectionCard } from "@/components/travel/collection-card";
 import { VerifiedBadge } from "@/components/kudos/kudos-ui";
-import { formatDistance, TRAVEL_MODE_INFO } from "@skaddosh/api/trips";
+import { formatDistance } from "@skaddosh/api/trips";
 
 const WAYS = [
   { icon: HandHeartIcon, title: "Appreciate", body: "Give Kudos as a thank-you. They go straight to the creator.", tone: "bg-hot-soft text-hot" },
@@ -54,8 +53,8 @@ export function Landing() {
               Where original work <span className="text-brand">finds its people.</span>
             </h1>
             <p className="mt-6 max-w-xl text-pretty text-lg leading-8 text-muted-foreground">
-              Show what you make, from art and music to software and writing. Get backed early, license your work,
-              team up with collaborators, and plan the journeys behind it on a map.
+              Show what you make, from art and music to software and writing. Collect Kudos from people who love it,
+              get backed early, license your work, and team up with collaborators.
             </p>
             <div className="mt-9 flex flex-wrap gap-3">
               <Button asChild size="lg" variant="brand">
@@ -81,7 +80,7 @@ export function Landing() {
             </dl>
           </div>
 
-          {/* Collage of real work and a real trip */}
+          {/* Collage of real work and a travel collection */}
           <div className="relative mx-auto w-full max-w-xl lg:max-w-none">
             <div className="grid grid-cols-6 grid-rows-6 gap-3 sm:gap-4" style={{ aspectRatio: "1 / 0.92" }}>
               {[0, 1, 2].map((i) => {
@@ -118,7 +117,7 @@ export function Landing() {
                 );
               })}
               <Link
-                href={featuredTrip ? `/trips/${featuredTrip.id}` : "/trips"}
+                href={featuredTrip ? `/travel/${featuredTrip.id}` : "/travel"}
                 className="col-span-6 row-span-2 flex overflow-hidden rounded-3xl border border-border bg-card shadow-lift"
               >
                 <RoutePreview
@@ -130,11 +129,11 @@ export function Landing() {
                 />
                 <div className="flex min-w-0 flex-col justify-center gap-1 p-4">
                   <p className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                    <RouteIcon className="size-3.5" /> Trip
+                    <MapPinIcon className="size-3.5" /> Travel collection
                   </p>
-                  <p className="truncate font-display text-lg">{featuredTrip?.title ?? "Plan a trip"}</p>
+                  <p className="truncate font-display text-lg">{featuredTrip?.title ?? "Places behind the work"}</p>
                   <p className="truncate text-xs text-muted-foreground">
-                    {featuredTrip ? `${featuredTrip.stopCount} stops · ${formatDistance(featuredTrip.distance ?? featuredTrip.straightLineDistance)}` : "Routes, stops, and days"}
+                    {featuredTrip ? `${featuredTrip.stopCount} places · ${formatDistance(featuredTrip.distance ?? featuredTrip.straightLineDistance)}` : "Photos and stories on a map"}
                   </p>
                 </div>
               </Link>
@@ -171,69 +170,6 @@ export function Landing() {
         </div>
       </section>
 
-      {/* Trips */}
-      <section className="mx-auto max-w-[90rem] px-4 py-20 sm:px-6 lg:px-8">
-        <div className="grid items-center gap-12 lg:grid-cols-2">
-          <div className="order-last lg:order-first">
-            <div className="overflow-hidden rounded-[2rem] border border-border bg-card shadow-lift">
-              <RoutePreview
-                points={featuredTrip?.points ?? []}
-                geometry={featuredTrip?.geometry}
-                accent={featuredTrip?.accentColor}
-                numbered
-                className="aspect-[4/3] w-full text-foreground"
-              />
-              {featuredTrip ? (
-                <div className="flex items-center justify-between gap-4 border-t border-border p-5">
-                  <div className="min-w-0">
-                    <p className="truncate font-display text-xl">{featuredTrip.title}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {TRAVEL_MODE_INFO[featuredTrip.mode].label} · {featuredTrip.stopCount} stops · {featuredTrip.days} {featuredTrip.days === 1 ? "day" : "days"}
-                    </p>
-                  </div>
-                  <Button asChild variant="outline" size="sm" className="h-9 shrink-0">
-                    <Link href={`/trips/${featuredTrip.id}`}>Open</Link>
-                  </Button>
-                </div>
-              ) : null}
-            </div>
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-primary">New: Trips</p>
-            <h2 className="mt-2 text-balance font-display text-4xl sm:text-5xl">Plan the journey behind the work.</h2>
-            <p className="mt-4 text-lg leading-8 text-muted-foreground">
-              A field trip, a tour, a sketching ride. Search places, drop pins on the map, and get real routes for driving,
-              cycling, walking, or wheelchair. Organise stops into days and share the plan.
-            </p>
-            <ul className="mt-8 space-y-4">
-              {[
-                { icon: MapPinIcon, text: "Search places or tap the map to add stops" },
-                { icon: RouteIcon, text: "Routes, distances, and travel times for each leg" },
-                { icon: NotebookPenIcon, text: "Days, notes, and how long you'll stay" },
-                { icon: UsersIcon, text: "Share publicly, link it to a project, or copy someone's route" },
-              ].map(({ icon: Icon, text }) => (
-                <li key={text} className="flex items-center gap-3">
-                  <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-accent text-accent-foreground">
-                    <Icon className="size-4" />
-                  </span>
-                  {text}
-                </li>
-              ))}
-            </ul>
-            <div className="mt-9 flex flex-wrap gap-3">
-              <Button asChild variant="brand" size="lg">
-                <Link href="/auth/signup">
-                  <MapIcon className="size-4" /> Plan a trip
-                </Link>
-              </Button>
-              <Button asChild variant="outline" size="lg">
-                <Link href="/trips">Browse trips</Link>
-              </Button>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* Gallery preview */}
       <section className="border-t border-border/70 bg-card/40">
         <div className="mx-auto max-w-[90rem] px-4 py-20 sm:px-6 lg:px-8">
@@ -249,6 +185,44 @@ export function Landing() {
             </Button>
           </div>
           <div className="mt-10">{feed.isLoading ? <GallerySkeleton count={6} /> : <Gallery items={items.slice(0, 8)} lang={lang} />}</div>
+        </div>
+      </section>
+
+      {/* Travel collections */}
+      <section className="mx-auto max-w-[90rem] px-4 py-20 sm:px-6 lg:px-8">
+        <div className="grid items-center gap-12 lg:grid-cols-[1fr_1.1fr]">
+          <div>
+            <p className="text-sm font-semibold text-primary">Travel collections</p>
+            <h2 className="mt-2 text-balance font-display text-4xl sm:text-5xl">The places behind the work.</h2>
+            <p className="mt-4 text-lg leading-8 text-muted-foreground">
+              Some work starts on the road: a sketchbook ride, a field recording walk, research for a book. Pin your photos and
+              their stories to the places they were made, and share the journey as one collection.
+            </p>
+            <ul className="mt-8 space-y-4">
+              {[
+                { icon: CameraIcon, text: "Photos and a story for every place" },
+                { icon: MapPinIcon, text: "Browse them on the map, in the order they happened" },
+                { icon: FolderHeartIcon, text: "Link a collection to the project it fed" },
+              ].map(({ icon: Icon, text }) => (
+                <li key={text} className="flex items-center gap-3">
+                  <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-accent text-accent-foreground">
+                    <Icon className="size-4" />
+                  </span>
+                  {text}
+                </li>
+              ))}
+            </ul>
+            <Button asChild variant="outline" size="lg" className="mt-9">
+              <Link href="/travel">
+                Browse travel collections <ArrowRightIcon className="size-4" />
+              </Link>
+            </Button>
+          </div>
+          <div className="grid gap-5 sm:grid-cols-2">
+            {(trips.data ?? []).slice(0, 2).map((collection) => (
+              <CollectionCard key={collection.id} collection={collection} />
+            ))}
+          </div>
         </div>
       </section>
 

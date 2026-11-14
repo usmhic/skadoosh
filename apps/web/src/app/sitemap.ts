@@ -5,7 +5,7 @@ const siteUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://skaddosh";
 const routes = [
   "",
   "/explore",
-  "/trips",
+  "/travel",
   "/read",
   "/how-it-works",
   "/portfolio",

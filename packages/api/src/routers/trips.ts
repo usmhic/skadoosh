@@ -230,6 +230,18 @@ export const tripsRouter = router({
       return tripCards(rows);
     }),
 
+  /** A creator's public travel collections, for their profile. */
+  byOwner: publicProcedure.input(z.object({ username: z.string().min(1).max(64) })).query(async ({ input }) => {
+    const [owner] = await db.select({ id: user.id }).from(user).where(eq(user.username, input.username)).limit(1);
+    if (!owner) return [];
+    const rows = await db
+      .select()
+      .from(trip)
+      .where(and(eq(trip.ownerId, owner.id), eq(trip.visibility, "public")))
+      .orderBy(desc(trip.startDate), desc(trip.updatedAt));
+    return tripCards(rows);
+  }),
+
   /** Public trips attached to a project, for its page. */
   forProject: publicProcedure.input(z.object({ projectId: z.string() })).query(async ({ input }) => {
     const rows = await db

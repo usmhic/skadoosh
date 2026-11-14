@@ -5,7 +5,7 @@ import type * as Leaflet from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { cn } from "@skaddosh/ui/lib/utils";
 
-export type MapStop = { id: string; lat: number; lng: number; name: string };
+export type MapStop = { id: string; lat: number; lng: number; name: string; photo?: string | null };
 
 // Public tile configuration (no secrets). Defaults to the OpenStreetMap standard layer, whose
 // usage policy suits light traffic; set your own tile provider for production volumes.
@@ -15,9 +15,20 @@ const TILE_ATTRIBUTION =
   '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 const ROUTING_ATTRIBUTION = 'Routing &copy; <a href="https://openrouteservice.org">openrouteservice</a> by HeiGIT';
 
-function markerHtml(index: number, total: number, accent: string, selected: boolean) {
+const escapeAttr = (value: string) => value.replace(/["&<>]/g, (c) => ({ '"': "&quot;", "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c]!);
+
+function markerSize(stop: MapStop, selected: boolean) {
+  return stop.photo ? (selected ? 56 : 44) : selected ? 34 : 28;
+}
+
+function markerHtml(stop: MapStop, index: number, total: number, accent: string, selected: boolean) {
+  if (stop.photo) {
+    // Photo pin: the place's first photo in a ring of the collection colour, numbered.
+    const size = markerSize(stop, selected);
+    return `<div style="position:relative;width:${size}px;height:${size}px;border-radius:999px;border:3px solid ${selected ? accent : "white"};box-shadow:0 6px 18px -6px rgba(20,16,50,.55)${selected ? `,0 0 0 3px ${accent}` : ""};background:#ddd url(&quot;${escapeAttr(stop.photo)}&quot;) center/cover no-repeat;"><span style="position:absolute;right:-6px;bottom:-6px;min-width:20px;height:20px;padding:0 4px;border-radius:999px;background:${accent};color:white;font:700 11px/20px var(--font-geist),system-ui,sans-serif;text-align:center;border:2px solid white;">${index + 1}</span></div>`;
+  }
   const end = index === 0 || index === total - 1;
-  const size = selected ? 34 : 28;
+  const size = markerSize(stop, selected);
   return `<div style="width:${size}px;height:${size}px;border-radius:999px;display:flex;align-items:center;justify-content:center;font:700 ${selected ? 13 : 12}px/1 var(--font-geist),system-ui,sans-serif;background:${end || selected ? accent : "white"};color:${end || selected ? "white" : accent};border:3px solid ${selected ? "white" : accent};box-shadow:0 4px 14px -4px rgba(20,16,50,.45)${selected ? `,0 0 0 3px ${accent}` : ""};">${index + 1}</div>`;
 }
 
@@ -102,15 +113,16 @@ export function TripMap({
       }
       stops.forEach((stop, index) => {
         const selected = stop.id === selectedId;
+        const size = markerSize(stop, selected);
         const marker = L.marker([stop.lat, stop.lng], {
-          icon: L.divIcon({ html: markerHtml(index, stops.length, accent, selected), className: "", iconSize: [selected ? 34 : 28, selected ? 34 : 28], iconAnchor: [selected ? 17 : 14, selected ? 17 : 14] }),
+          icon: L.divIcon({ html: markerHtml(stop, index, stops.length, accent, selected), className: "", iconSize: [size, size], iconAnchor: [size / 2, size / 2] }),
           draggable: Boolean(handlers.current.onMoveStop),
           keyboard: true,
           title: stop.name,
           alt: `${index + 1}. ${stop.name}`,
           zIndexOffset: selected ? 1000 : 0,
         }).addTo(layer);
-        marker.bindTooltip(`${index + 1}. ${stop.name}`, { direction: "top", offset: [0, -14] });
+        marker.bindTooltip(`${index + 1}. ${stop.name}`, { direction: "top", offset: [0, -size / 2] });
         marker.on("click", () => handlers.current.onSelect?.(stop.id));
         marker.on("dragend", () => {
           const p = marker.getLatLng();
@@ -154,7 +166,7 @@ export function TripMap({
     <div
       ref={containerRef}
       role="region"
-      aria-label="Trip map"
+      aria-label="Travel map"
       className={cn("isolate z-0 bg-muted [&_.leaflet-control-attribution]:text-[10px]", picking && "[&_.leaflet-container]:cursor-crosshair cursor-crosshair", className)}
     />
   );
