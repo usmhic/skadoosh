@@ -12,14 +12,16 @@ import { FollowButton } from "@/components/follow-button";
 import { Gallery, GallerySkeleton, type GalleryItem } from "@/components/gallery/gallery-tile";
 import { ReputationSignals, VerifiedBadge, initials } from "@/components/kudos/kudos-ui";
 import { CreateItemDialog } from "@/components/studio/create-item-dialog";
+import { CollectionCard } from "@/components/travel/collection-card";
 
-type Tab = "work" | "contributes" | "believes" | "collections";
+type Tab = "work" | "travel" | "contributes" | "believes" | "collections";
 
 export default function CreatorPage({ params }: { params: Promise<{ username: string }> }) {
   const { username } = use(params);
   const { data: session } = useSession();
   const { data, isLoading, refetch } = trpc.creators.byUsername.useQuery({ username });
   const [tab, setTab] = useState<Tab>("work");
+  const travel = trpc.trips.byOwner.useQuery({ username }, { enabled: Boolean(username) });
   const [createOpen, setCreateOpen] = useState(false);
 
   if (isLoading) return <ProfileSkeleton />;
@@ -56,6 +58,7 @@ export default function CreatorPage({ params }: { params: Promise<{ username: st
 
   const tabs: Array<{ value: Tab; label: string; count: number }> = [
     { value: "work", label: "Work", count: work.length },
+    { value: "travel", label: "Travel", count: travel.data?.length ?? 0 },
     { value: "contributes", label: "Contributes to", count: data.contributesTo.length },
     { value: "believes", label: "Believes in", count: data.believesIn.length },
     { value: "collections", label: "Collections", count: collections.length },
@@ -157,6 +160,13 @@ export default function CreatorPage({ params }: { params: Promise<{ username: st
               ) : null}
             </Empty>
           )
+        ) : null}
+        {tab === "travel" ? (
+          <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+            {(travel.data ?? []).map((collection) => (
+              <CollectionCard key={collection.id} collection={collection} showOwner={false} />
+            ))}
+          </div>
         ) : null}
         {tab === "contributes" ? <Gallery items={data.contributesTo} /> : null}
         {tab === "believes" ? <Gallery items={data.believesIn} /> : null}

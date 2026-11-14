@@ -17,6 +17,7 @@ import { cn } from "@skaddosh/ui/lib/utils";
 import { ArrowRightIcon, ChevronDownIcon } from "lucide-react";
 import { Gallery, GallerySkeleton } from "@/components/gallery/gallery-tile";
 import { MEDIUM_INFO } from "@/lib/mediums";
+import { TravelStrip } from "@/components/travel/travel-strip";
 import type { Medium } from "@skaddosh/db/schema";
 
 type Mode = "for-you" | "following" | "rising" | "backing" | "collab" | "new-voices";
@@ -139,6 +140,8 @@ export function Explore() {
           <Gallery items={feed.data!.items} lang={lang} />
         )}
       </div>
+
+      {!medium || medium === "photography" || medium === "art" ? <TravelStrip /> : null}
     </div>
   );
 }

@@ -23,6 +23,9 @@ const config: NextConfig = {
       "research-archives": "research",
     };
     return [
+      // Trips became travel collections (docs/TRAVEL.md).
+      { source: "/trips", destination: "/travel", permanent: true },
+      { source: "/trips/:id", destination: "/travel/:id", permanent: true },
       { source: "/circles", destination: "/", permanent: true },
       ...Object.entries(circles).map(([slug, medium]) => ({
         source: `/circles/${slug}`,

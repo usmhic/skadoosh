@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { orsErrorMessage, parseDirections, parseOptimizationOrder, parsePlaces } from "./ors";
+import { orsErrorMessage, parseDirections, parsePlaces } from "./ors";
 import { rateLimit } from "./rate-limit";
 import {
   applyOrder,
@@ -8,7 +8,6 @@ import {
   formatDistance,
   formatDuration,
   haversineMeters,
-  planDays,
   routeKey,
   straightLineMeters,
 } from "./trip-planning";
@@ -46,29 +45,6 @@ test("formatting distances and durations", () => {
   assert.equal(formatDuration(73 * 3600 + 25 * 60), "73 h");
 });
 
-test("planDays counts the leg arriving at a stop toward that stop's day", () => {
-  const stops = [
-    { day: 1, stayMinutes: 0 },
-    { day: 1, stayMinutes: 30 },
-    { day: 2, stayMinutes: 60 },
-    { day: 2, stayMinutes: 0 },
-  ];
-  const legs = [
-    { distance: 1000, duration: 100 },
-    { distance: 2000, duration: 200 },
-    { distance: 4000, duration: 400 },
-  ];
-  const days = planDays(stops, legs);
-  assert.deepEqual(
-    days.map((d) => [d.day, d.stopIndexes, d.distance, d.duration, d.stayMinutes]),
-    [
-      [1, [0, 1], 1000, 100, 30],
-      [2, [2, 3], 6000, 600, 60],
-    ],
-  );
-  assert.equal(planDays(stops, null)[1]!.distance, 0);
-});
-
 test("boundsOf and applyOrder", () => {
   assert.equal(boundsOf([]), null);
   assert.deepEqual(boundsOf([marrakech, ouarzazate]), [
@@ -80,7 +56,7 @@ test("boundsOf and applyOrder", () => {
 });
 
 // Fixtures follow the documented shapes: directions GeoJSON (FeatureCollection with a LineString
-// feature whose properties carry summary, segments, and way_points), Pelias features, VROOM steps.
+// feature whose properties carry summary, segments, and way_points) and Pelias features.
 
 test("parseDirections reads geometry, totals, and per-leg segments", () => {
   const body = {
@@ -153,14 +129,6 @@ test("parsePlaces reads Pelias features and skips malformed ones", () => {
   });
   assert.equal(places[1]!.name, "Somewhere");
   assert.deepEqual(parsePlaces({}), []);
-});
-
-test("parseOptimizationOrder reads job steps (id or legacy job) and rejects partial plans", () => {
-  const steps = [{ type: "start" }, { type: "job", id: 2 }, { type: "job", job: 0 }, { type: "job", id: 1 }, { type: "end" }];
-  assert.deepEqual(parseOptimizationOrder({ code: 0, routes: [{ steps }] }, 3), [2, 0, 1]);
-  assert.equal(parseOptimizationOrder({ routes: [{ steps }], unassigned: [{ id: 3 }] }, 3), null);
-  assert.equal(parseOptimizationOrder({ routes: [{ steps }] }, 4), null);
-  assert.equal(parseOptimizationOrder({ routes: [] }, 1), null);
 });
 
 test("ORS error codes become actionable sentences", () => {
