@@ -9,8 +9,8 @@ Verified creators show art, design, software, music, writing, and more. Supporte
 appreciate with **Hot Kudos**, back projects early with **Cold Kudos**, buy clear
 **licences**, or **contribute** under agreements that share credit and income.
 Kudos never quietly turn into ownership. Every right is spelled out, hashed, and
-optionally on record on Base. And with **Trips**, creators plan the journeys behind
-their work on a map, with real routes from OpenRouteService.
+optionally on record on Base. **Travel collections** pin photos and stories to the
+places the work was made, on a map.
 
 <br />
 
@@ -66,13 +66,13 @@ intentional; just be aware which one a given URL needs. See
 | 🤝 | **Contributors** | Two-sided agreements with credit, optional income splits, and co-ownership, all hashed and attested |
 | ✅ | **Verification** | Veriff identity checks for creators. Only the result and country are kept, never documents |
 | ⛓ | **On-chain (optional)** | Kudos as a closed-loop ERC-20 on Base, and a hash-only `CreativeRegistry` for works, credits, and licences |
-| 🗺️ | **Trips** | Plan journeys on a Leaflet map: place search, real routes and travel times (OpenRouteService), days, notes, best order, sharing, GPX, and links to projects |
+| 🗺️ | **Travel collections** | Gallery collections of places, each with photos and a story, on a Leaflet map with the journey drawn between them (OpenRouteService), linked to projects |
 | K | **Kudos** | Hot Kudos to give, Cold Kudos to back projects, milestone releases, capped returns, and a full wallet history |
 | 🏅 | **Reputation** | Signals you can check (backed by, delivered, supports, early believer) instead of follower counts |
 | 📚 | **Reader** | Reading experience, translations, and confidential unlocks |
 | 🖋 | **Creator** | Studio, pieces, projects, drafts, and publishing controls |
 | 🎨 | **Portfolio** | Public pages, projects, contact forms, analytics, premium features |
-| 📱 | **Mobile** | Expo app with Explore, Trips, project pages (give Kudos, licence, see contributors), Kudos, Verify, read, and studio |
+| 📱 | **Mobile** | Expo app with Explore, Travel, project pages (give Kudos, licence, see contributors), Kudos, Verify, read, and studio |
 | 🔎 | **AI search** | OpenAI-backed discovery across published works |
 | 🌍 | **i18n** | Shared i18next localization across web and mobile |
 
@@ -172,7 +172,7 @@ backend service. Full breakdown in [ARCHITECTURE.md](./ARCHITECTURE.md).
 Copy [`.env.example`](./.env.example) to `.env` and fill values locally; the tracked template is
 intentionally empty. Native development requires `DATABASE_URL` and `BETTER_AUTH_SECRET`. The
 Compose stack also requires `POSTGRES_PASSWORD`, `MINIO_ACCESS_KEY`, and `MINIO_SECRET_KEY`.
-Paddle, OpenAI, Resend, OAuth, trip routing (`ORS_API_KEY`, see [docs/TRIPS.md](./docs/TRIPS.md)), identity verification (`IDENTITY_PROVIDER`, `VERIFF_*`), and
+Paddle, OpenAI, Resend, OAuth, travel collections (`ORS_API_KEY`, see [docs/TRAVEL.md](./docs/TRAVEL.md)), identity verification (`IDENTITY_PROVIDER`, `VERIFF_*`), and
 on-chain Kudos (`CHAIN_*`, `KUDOS_TOKEN_ADDRESS`, `CREATIVE_REGISTRY_ADDRESS`, `CRON_SECRET`)
 remain optional. Each feature switches itself off when its variables are missing. See
 [docs/IDENTITY.md](./docs/IDENTITY.md), [docs/CHAIN.md](./docs/CHAIN.md), and
@@ -244,7 +244,7 @@ The full mobile signing and delivery setup is documented in
 | [Research](./docs/RESEARCH.md) | Market gaps, business model, network choice, ownership and licensing, identity providers |
 | [Kudos on Base](./docs/CHAIN.md) | Contracts, roles, queue, jurisdictions, deployment runbook |
 | [Identity](./docs/IDENTITY.md) | Verification flow, data minimisation, retention, accessibility |
-| [Trips](./docs/TRIPS.md) | Trip planning, OpenRouteService integration, caching, limits, configuration |
+| [Travel collections](./docs/TRAVEL.md) | Places with photos on a map, OpenRouteService integration, caching, limits, configuration |
 | [Contributing](./CONTRIBUTING.md) | Local setup, branch conventions, coding standards, release process |
 | [Architecture](./ARCHITECTURE.md) | How the pieces fit together, directory purposes |
 | [Engineering standards](./STANDARDS.md) | Shared conventions across every usmhic project |

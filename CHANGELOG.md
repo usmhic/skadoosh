@@ -9,14 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Trips** ([docs/TRIPS.md](docs/TRIPS.md)): plan journeys on a Leaflet map, with place search and
-  pin naming, real routes and per-leg travel times for seven travel modes, days, stay times, notes,
-  drag-and-drop ordering, **Best order**, private, link-only, or public sharing, copying public trips,
-  GPX export, and links to projects. Routing comes from OpenRouteService through a server-side
-  client, with a per-trip route cache, rate limits, and plain-language errors. Trips still work
-  without a key, using straight-line legs. Includes migration `0003_trips` with three demo trips,
-  `/trips` and `/trips/:id`, a "The journey" section on project pages, trips in Studio, and a
-  Trips tab in the app.
+- **Travel collections** ([docs/TRAVEL.md](docs/TRAVEL.md)): gallery collections of places in the
+  order they happened, each with up to 12 photos, captions, and a story. They're shown on a Leaflet
+  map with photo pins, the journey drawn between places, and a photo lightbox. Place search and
+  journey lines come from OpenRouteService through a server-side client with a journey cache and
+  rate limits. Without a key, collections still work with straight lines. They appear at `/travel`,
+  in an Explore strip, on a Travel tab on profiles, under "Places behind this work" on projects, in
+  Studio, and in the app's Travel tab. Migrations `0003_trips`, `0004_travel_collections`, and
+  `0005_drop_itinerary_fields`.
 - A complete redesign:
   - A new identity built from the brand mark: paper with violet ink, the violet → coral → amber
     gradient, Bricolage Grotesque for display, pill buttons, and soft depth.
@@ -55,6 +55,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Trips became travel collections: skaddosh is a gallery, not an itinerary planner. Days, stay
+  times, place types, best-order optimisation, and GPX export were removed, and `/trips` redirects
+  to `/travel`.
 - Circles became **mediums**. `/circles` URLs redirect to the matching Explore filter.
 - Licence income and contributor shares go through `distributeProjectIncome` and `payCreatorSide`.
 

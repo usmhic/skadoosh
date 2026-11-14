@@ -27,7 +27,7 @@ apps/mobile (Expo) ──── tRPC over HTTP ────▶ apps/web's API ro
 packages/api ── viem (operator key, queued) ──▶ Base: KudosToken + CreativeRegistry
 Veriff ── signed decision webhook ──▶ /api/identity/veriff
 scheduler ── POST /api/chain/reconcile (Bearer CRON_SECRET)
-packages/api ── HTTPS (server-side key) ──▶ OpenRouteService: directions, geocoding, optimization
+packages/api ── HTTPS (server-side key) ──▶ OpenRouteService: journey lines and place search
 browser ── map tiles ──▶ OpenStreetMap (or NEXT_PUBLIC_MAP_TILE_URL)
 ```
 
@@ -53,7 +53,7 @@ into the Docker image and has its own release path (EAS builds via `mobile-ci.ym
 | `packages/api/src/lib/kudos-economy.ts` | Pure Kudos rules (stage weights, releases, returns, caps, allowance). No I/O, unit-tested, also exported to clients as `@skaddosh/api/kudos` |
 | `packages/api/src/lib/kudos-ledger.ts` | Transactional helpers that move Kudos and write `kudos_ledger` rows. Every balance change goes through here |
 | `packages/api/src/lib/chain.ts`, `chain-ops.ts` | Chain configuration, viem clients, and the `chain_operation` queue (exports, imports, attestations). See [docs/CHAIN.md](docs/CHAIN.md) |
-| `packages/api/src/lib/ors.ts`, `trip-planning.ts`, `routers/trips.ts` | Trip planning: the server-only OpenRouteService client, pure planning helpers (also exported to clients as `@skaddosh/api/trips`), and the trips router with a per-trip route cache. See [docs/TRIPS.md](docs/TRIPS.md) |
+| `packages/api/src/lib/ors.ts`, `trip-planning.ts`, `routers/trips.ts` | Travel collections: the server-only OpenRouteService client (place search and journey lines), pure helpers (also exported to clients as `@skaddosh/api/trips`), and the trips router with a per-collection journey cache. See [docs/TRAVEL.md](docs/TRAVEL.md) |
 | `packages/api/src/lib/identity.ts` | Identity provider (Veriff, plus a dev-only mock), webhook verification, and the `assertVerified` gate. See [docs/IDENTITY.md](docs/IDENTITY.md) |
 | `packages/api/src/lib/licensing.ts`, `packages/db/src/legal.ts` | Versioned licence and contributor-agreement templates, rendering, and hashing |
 | `packages/contracts/` | Foundry project: `KudosToken`, `CreativeRegistry`, tests, the idempotent CREATE2 deploy script, and the generated ABI (`@skaddosh/contracts/abi`). Not part of the Docker image's build, and its scripts are prefixed `contracts:` so Turbo doesn't run Forge |
