@@ -12,7 +12,13 @@ type TripRow = typeof trip.$inferSelect;
 type StopRow = typeof tripStop.$inferSelect;
 
 const lat = z.number().min(-90).max(90);
-const photo = z.object({ url: z.string().url().max(2000), caption: z.string().trim().max(280).default("") });
+/** Photo and cover URLs must be http(s): they end up in <img src> and CSS url() on the map. */
+const imageUrl = z
+  .string()
+  .url()
+  .max(2000)
+  .refine((value) => /^https?:\/\//i.test(value), "Images must be http or https links.");
+const photo = z.object({ url: imageUrl, caption: z.string().trim().max(280).default("") });
 const photos = z.array(photo).max(TRIP_LIMITS.MAX_PHOTOS_PER_PLACE);
 
 /** The collection's cover: its chosen cover image, else the first photo of any place. */
@@ -146,7 +152,7 @@ const tripFields = {
   mode: z.enum(TRAVEL_MODES).optional(),
   visibility: z.enum(TRIP_VISIBILITIES).optional(),
   accentColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
-  coverImage: z.string().url().max(2000).nullable().optional(),
+  coverImage: imageUrl.nullable().optional(),
   startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
   projectId: z.string().nullable().optional(),
 };
