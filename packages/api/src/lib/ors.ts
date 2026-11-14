@@ -1,7 +1,7 @@
 /**
  * OpenRouteService client (server-only). The key stays on the server, as HeiGIT's terms require:
  * browsers and the app call our tRPC API, which calls ORS. Response shapes follow the ORS API
- * reference (directions GeoJSON, Pelias geocoder, VROOM optimization); see docs/TRIPS.md.
+ * reference (directions GeoJSON, Pelias geocoder); see docs/TRAVEL.md.
  */
 import { TRPCError } from "@trpc/server";
 import type { Leg } from "./trip-planning";
@@ -88,23 +88,6 @@ export function parsePlaces(body: unknown): Place[] {
     });
   }
   return places;
-}
-
-/**
- * Parse a VROOM `/optimization` response into the visiting order of job ids. VROOM steps carry the
- * job id as `id` (current) or `job` (older releases). Returns null if any job was left unassigned.
- */
-export function parseOptimizationOrder(body: unknown, jobCount: number): number[] | null {
-  const b = body as { routes?: Array<{ steps?: Array<Record<string, unknown>> }>; unassigned?: unknown[] } | null;
-  if (Array.isArray(b?.unassigned) && b.unassigned.length > 0) return null;
-  const steps = b?.routes?.[0]?.steps;
-  if (!Array.isArray(steps)) return null;
-  const order = steps
-    .filter((s) => s.type === "job")
-    .map((s) => num(s.job) ?? num(s.id))
-    .filter((id): id is number => id !== null);
-  if (order.length !== jobCount || new Set(order).size !== jobCount) return null;
-  return order;
 }
 
 /** Turn an ORS failure into a sentence a traveller can act on. */
@@ -197,24 +180,3 @@ export async function reverseGeocode(lat: number, lng: number): Promise<Place | 
   return parsePlaces(body)[0] ?? null;
 }
 
-/**
- * Best visiting order for the middle stops, keeping the first and last fixed. Returns the indexes
- * of `middle` in visiting order.
- */
-export async function optimizeOrder(
-  profile: string,
-  start: [number, number],
-  middle: Array<[number, number]>,
-  end: [number, number],
-): Promise<number[]> {
-  const body = await orsRequest("/optimization", {
-    method: "POST",
-    body: {
-      jobs: middle.map((location, id) => ({ id, location })),
-      vehicles: [{ id: 1, profile, start, end }],
-    },
-  });
-  const order = parseOptimizationOrder(body, middle.length);
-  if (!order) throw new TRPCError({ code: "BAD_GATEWAY", message: "Couldn't find a better order for these stops." });
-  return order;
-}
