@@ -29,6 +29,20 @@
       "when": 1794425100322,
       "tag": "0003_trips",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1794646927085,
+      "tag": "0004_travel_collections",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1794646934160,
+      "tag": "0005_drop_itinerary_fields",
+      "breakpoints": true
     }
   ]
 }

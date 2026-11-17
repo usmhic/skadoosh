@@ -2,9 +2,9 @@ import { TRPCError } from "@trpc/server";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { and, asc, count, desc, eq, inArray, sql } from "drizzle-orm";
-import { db, project, STOP_KINDS, TRAVEL_MODES, TRIP_VISIBILITIES, trip, tripStop, user } from "@skaddosh/db";
+import { db, project, TRAVEL_MODES, TRIP_VISIBILITIES, trip, tripStop, user, type PlacePhoto } from "@skaddosh/db";
 import { protectedProcedure, publicProcedure, router } from "../trpc";
-import { autocomplete, directions, optimizeOrder, orsConfig, reverseGeocode } from "../lib/ors";
+import { autocomplete, directions, orsConfig, reverseGeocode } from "../lib/ors";
 import { rateLimit } from "../lib/rate-limit";
 import { haversineMeters, routeKey, straightLineMeters, TRAVEL_MODE_INFO, TRIP_LIMITS } from "../lib/trip-planning";
 
@@ -12,6 +12,19 @@ type TripRow = typeof trip.$inferSelect;
 type StopRow = typeof tripStop.$inferSelect;
 
 const lat = z.number().min(-90).max(90);
+/** Photo and cover URLs must be http(s): they end up in <img src> and CSS url() on the map. */
+const imageUrl = z
+  .string()
+  .url()
+  .max(2000)
+  .refine((value) => /^https?:\/\//i.test(value), "Images must be http or https links.");
+const photo = z.object({ url: imageUrl, caption: z.string().trim().max(280).default("") });
+const photos = z.array(photo).max(TRIP_LIMITS.MAX_PHOTOS_PER_PLACE);
+
+/** The collection's cover: its chosen cover image, else the first photo of any place. */
+function coverOf(row: TripRow, stops: StopRow[]): string | null {
+  return row.coverImage ?? stops.flatMap((s) => s.photos)[0]?.url ?? null;
+}
 const lng = z.number().min(-180).max(180);
 const MINUTE = 60_000;
 
@@ -21,7 +34,7 @@ async function stopsOf(tripId: string) {
 
 async function ownedTrip(tripId: string, userId: string): Promise<TripRow> {
   const [row] = await db.select().from(trip).where(eq(trip.id, tripId)).limit(1);
-  if (!row || row.ownerId !== userId) throw new TRPCError({ code: "NOT_FOUND", message: "Trip not found." });
+  if (!row || row.ownerId !== userId) throw new TRPCError({ code: "NOT_FOUND", message: "Travel collection not found." });
   return row;
 }
 
@@ -29,7 +42,7 @@ async function ownedTrip(tripId: string, userId: string): Promise<TripRow> {
 async function viewableTrip(tripId: string, viewerId: string | undefined): Promise<TripRow> {
   const [row] = await db.select().from(trip).where(eq(trip.id, tripId)).limit(1);
   if (!row || (row.visibility === "private" && row.ownerId !== viewerId)) {
-    throw new TRPCError({ code: "NOT_FOUND", message: "Trip not found." });
+    throw new TRPCError({ code: "NOT_FOUND", message: "Travel collection not found." });
   }
   return row;
 }
@@ -57,6 +70,8 @@ function tripView(row: TripRow, stops: StopRow[]) {
     mode: row.mode,
     visibility: row.visibility,
     accentColor: row.accentColor,
+    coverImage: row.coverImage,
+    cover: coverOf(row, stops),
     startDate: row.startDate,
     projectId: row.projectId,
     createdAt: row.createdAt,
@@ -67,10 +82,8 @@ function tripView(row: TripRow, stops: StopRow[]) {
       address: s.address,
       lat: s.lat,
       lng: s.lng,
-      kind: s.kind,
-      day: s.day,
-      stayMinutes: s.stayMinutes,
-      notes: s.notes,
+      story: s.notes,
+      photos: s.photos as PlacePhoto[],
     })),
     route: routeCurrent
       ? {
@@ -139,6 +152,7 @@ const tripFields = {
   mode: z.enum(TRAVEL_MODES).optional(),
   visibility: z.enum(TRIP_VISIBILITIES).optional(),
   accentColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
+  coverImage: imageUrl.nullable().optional(),
   startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
   projectId: z.string().nullable().optional(),
 };
@@ -146,7 +160,7 @@ const tripFields = {
 async function assertOwnProject(projectId: string | null | undefined, userId: string) {
   if (!projectId) return;
   const [row] = await db.select({ creatorId: project.creatorId }).from(project).where(eq(project.id, projectId)).limit(1);
-  if (!row || row.creatorId !== userId) throw new TRPCError({ code: "BAD_REQUEST", message: "You can only link trips to your own projects." });
+  if (!row || row.creatorId !== userId) throw new TRPCError({ code: "BAD_REQUEST", message: "You can only link travel collections to your own projects." });
 }
 
 /** Card data for lists: stops for a mini map, plus totals. */
@@ -168,6 +182,7 @@ async function tripCards(rows: TripRow[]) {
     const own = stops.filter((s) => s.tripId === row.id);
     const view = tripView(row, own);
     const owner = owners.find((o) => o.id === row.ownerId);
+    const allPhotos = own.flatMap((s) => s.photos as PlacePhoto[]);
     return {
       id: row.id,
       title: row.title,
@@ -177,8 +192,10 @@ async function tripCards(rows: TripRow[]) {
       accentColor: row.accentColor,
       startDate: row.startDate,
       updatedAt: row.updatedAt,
+      cover: coverOf(row, own),
+      photoCount: allPhotos.length,
+      previewPhotos: allPhotos.slice(0, 4).map((p) => p.url),
       stopCount: own.length,
-      days: own.length ? Math.max(...own.map((s) => s.day)) : 0,
       from: own[0]?.name ?? null,
       to: own.length > 1 ? own[own.length - 1]!.name : null,
       points: own.map((s) => ({ lat: s.lat, lng: s.lng })),
@@ -219,6 +236,18 @@ export const tripsRouter = router({
       return tripCards(rows);
     }),
 
+  /** A creator's public travel collections, for their profile. */
+  byOwner: publicProcedure.input(z.object({ username: z.string().min(1).max(64) })).query(async ({ input }) => {
+    const [owner] = await db.select({ id: user.id }).from(user).where(eq(user.username, input.username)).limit(1);
+    if (!owner) return [];
+    const rows = await db
+      .select()
+      .from(trip)
+      .where(and(eq(trip.ownerId, owner.id), eq(trip.visibility, "public")))
+      .orderBy(desc(trip.startDate), desc(trip.updatedAt));
+    return tripCards(rows);
+  }),
+
   /** Public trips attached to a project, for its page. */
   forProject: publicProcedure.input(z.object({ projectId: z.string() })).query(async ({ input }) => {
     const rows = await db
@@ -256,12 +285,12 @@ export const tripsRouter = router({
     .mutation(async ({ ctx, input }) => {
       await assertOwnProject(input?.projectId, ctx.session.user.id);
       const [owned] = await db.select({ n: count() }).from(trip).where(eq(trip.ownerId, ctx.session.user.id));
-      if ((owned?.n ?? 0) >= 200) throw new TRPCError({ code: "BAD_REQUEST", message: "You've reached 200 trips. Delete an old one first." });
+      if ((owned?.n ?? 0) >= 200) throw new TRPCError({ code: "BAD_REQUEST", message: "You've reached 200 travel collections. Delete an old one first." });
       const id = `trip_${randomUUID().slice(0, 8)}`;
       await db.insert(trip).values({
         id,
         ownerId: ctx.session.user.id,
-        title: input?.title || "Untitled trip",
+        title: input?.title || "Untitled collection",
         mode: input?.mode ?? "driving-car",
         projectId: input?.projectId ?? null,
       });
@@ -274,7 +303,7 @@ export const tripsRouter = router({
     const { id, ...fields } = input;
     await db
       .update(trip)
-      .set({ ...fields, ...(fields.title !== undefined ? { title: fields.title || "Untitled trip" } : {}), updatedAt: new Date() })
+      .set({ ...fields, ...(fields.title !== undefined ? { title: fields.title || "Untitled collection" } : {}), updatedAt: new Date() })
       .where(eq(trip.id, id));
     return { ok: true };
   }),
@@ -298,6 +327,7 @@ export const tripsRouter = router({
         summary: source.summary,
         mode: source.mode,
         accentColor: source.accentColor,
+        coverImage: source.coverImage,
         // The cached route still matches the copied stops, so it's reused without calling ORS.
         routeGeometry: source.routeGeometry,
         routeLegs: source.routeLegs,
@@ -316,10 +346,8 @@ export const tripsRouter = router({
             address: s.address,
             lat: s.lat,
             lng: s.lng,
-            kind: s.kind,
-            day: s.day,
-            stayMinutes: s.stayMinutes,
             notes: s.notes,
+            photos: s.photos,
           })),
         );
       }
@@ -335,8 +363,8 @@ export const tripsRouter = router({
         address: z.string().trim().max(300).default(""),
         lat,
         lng,
-        kind: z.enum(STOP_KINDS).default("place"),
-        day: z.number().int().min(1).max(TRIP_LIMITS.MAX_DAYS).optional(),
+        story: z.string().trim().max(2000).default(""),
+        photos: photos.default([]),
         /** Insert before this index. Defaults to the end. */
         position: z.number().int().min(0).optional(),
       }),
@@ -345,10 +373,9 @@ export const tripsRouter = router({
       await ownedTrip(input.tripId, ctx.session.user.id);
       const stops = await stopsOf(input.tripId);
       if (stops.length >= TRIP_LIMITS.MAX_STOPS) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: `A trip can have up to ${TRIP_LIMITS.MAX_STOPS} stops.` });
+        throw new TRPCError({ code: "BAD_REQUEST", message: `A travel collection can have up to ${TRIP_LIMITS.MAX_STOPS} places.` });
       }
       const position = Math.min(input.position ?? stops.length, stops.length);
-      const neighbour = stops[position - 1] ?? stops[position];
       const id = randomUUID();
       await db.transaction(async (tx) => {
         for (const s of stops.slice(position)) {
@@ -362,8 +389,8 @@ export const tripsRouter = router({
           address: input.address,
           lat: input.lat,
           lng: input.lng,
-          kind: input.kind,
-          day: input.day ?? neighbour?.day ?? 1,
+          notes: input.story,
+          photos: input.photos,
         });
       });
       await touch(input.tripId);
@@ -375,27 +402,25 @@ export const tripsRouter = router({
       z.object({
         id: z.string(),
         name: z.string().trim().min(1).max(120).optional(),
-        notes: z.string().trim().max(2000).optional(),
-        kind: z.enum(STOP_KINDS).optional(),
-        day: z.number().int().min(1).max(TRIP_LIMITS.MAX_DAYS).optional(),
-        stayMinutes: z.number().int().min(0).max(TRIP_LIMITS.MAX_STAY_MINUTES).optional(),
+        story: z.string().trim().max(2000).optional(),
+        photos: photos.optional(),
         lat: lat.optional(),
         lng: lng.optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
       const [stop] = await db.select().from(tripStop).where(eq(tripStop.id, input.id)).limit(1);
-      if (!stop) throw new TRPCError({ code: "NOT_FOUND", message: "Stop not found." });
+      if (!stop) throw new TRPCError({ code: "NOT_FOUND", message: "Place not found." });
       await ownedTrip(stop.tripId, ctx.session.user.id);
-      const { id, ...fields } = input;
-      await db.update(tripStop).set(fields).where(eq(tripStop.id, id));
+      const { id, story, ...fields } = input;
+      await db.update(tripStop).set({ ...fields, ...(story !== undefined ? { notes: story } : {}) }).where(eq(tripStop.id, id));
       await touch(stop.tripId);
       return { ok: true };
     }),
 
   removeStop: protectedProcedure.input(z.object({ id: z.string() })).mutation(async ({ ctx, input }) => {
     const [stop] = await db.select().from(tripStop).where(eq(tripStop.id, input.id)).limit(1);
-    if (!stop) throw new TRPCError({ code: "NOT_FOUND", message: "Stop not found." });
+    if (!stop) throw new TRPCError({ code: "NOT_FOUND", message: "Place not found." });
     await ownedTrip(stop.tripId, ctx.session.user.id);
     await db.delete(tripStop).where(eq(tripStop.id, input.id));
     const rest = await stopsOf(stop.tripId);
@@ -411,7 +436,7 @@ export const tripsRouter = router({
       const stops = await stopsOf(input.tripId);
       const known = new Set(stops.map((s) => s.id));
       if (input.stopIds.length !== stops.length || input.stopIds.some((id) => !known.has(id)) || new Set(input.stopIds).size !== stops.length) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "The stop list changed. Refresh and try again." });
+        throw new TRPCError({ code: "BAD_REQUEST", message: "The places changed. Refresh and try again." });
       }
       await writeOrder(input.tripId, input.stopIds);
       await touch(input.tripId);
@@ -429,25 +454,6 @@ export const tripsRouter = router({
     return { route: view.route, routeError: view.routeError, routeStale: view.routeStale };
   }),
 
-  /** Visit the middle stops in the shortest order, keeping where you start and finish. */
-  optimize: protectedProcedure.input(z.object({ tripId: z.string() })).mutation(async ({ ctx, input }) => {
-    const row = await ownedTrip(input.tripId, ctx.session.user.id);
-    const stops = await stopsOf(row.id);
-    if (stops.length < 4) return { changed: false };
-    if (stops.length > TRIP_LIMITS.MAX_STOPS) throw new TRPCError({ code: "BAD_REQUEST", message: "Too many stops to reorder." });
-    rateLimit(`optimize:${ctx.session.user.id}`, 6, MINUTE);
-    const first = stops[0]!;
-    const last = stops[stops.length - 1]!;
-    const middle = stops.slice(1, -1);
-    const order = await optimizeOrder(row.mode, [first.lng, first.lat], middle.map((s) => [s.lng, s.lat]), [last.lng, last.lat]);
-    const orderedIds = [first.id, ...order.map((i) => middle[i]!.id), last.id];
-    const changed = orderedIds.some((id, i) => id !== stops[i]!.id);
-    if (changed) {
-      await writeOrder(row.id, orderedIds);
-      await touch(row.id);
-    }
-    return { changed };
-  }),
 
   /** Place search for adding stops. */
   search: protectedProcedure

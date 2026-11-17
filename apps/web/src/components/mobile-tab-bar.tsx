@@ -8,8 +8,8 @@ import { cn } from "@skaddosh/ui/lib/utils";
 import { BookOpenIcon, CompassIcon, LogInIcon, MapIcon, PenToolIcon, SparklesIcon, WalletIcon, type LucideIcon } from "lucide-react";
 import { CreateMenu } from "@/components/header";
 
-/** Full-screen editors, the trip planner, and auth pages have their own chrome. */
-const HIDDEN_PREFIXES = ["/auth", "/welcome", "/studio/works/", "/studio/projects/", "/studio/gallery/", "/portfolio/", "/trips/"];
+/** Full-screen editors, travel collections, and auth pages have their own chrome. */
+const HIDDEN_PREFIXES = ["/auth", "/welcome", "/studio/works/", "/studio/projects/", "/studio/gallery/", "/portfolio/", "/travel/"];
 
 type Tab = { href: string; label: string; icon: LucideIcon; active: boolean };
 
@@ -26,8 +26,8 @@ export function MobileTabBar() {
     icon: CompassIcon,
     active: (Boolean(session) && pathname === "/") || pathname.startsWith("/explore") || pathname.startsWith("/read") || pathname.startsWith("/projects"),
   };
-  const trips: Tab = { href: "/trips", label: "Trips", icon: MapIcon, active: pathname === "/trips" };
-  const left = [explore, trips];
+  const travel: Tab = { href: "/travel", label: "Travel", icon: MapIcon, active: pathname === "/travel" };
+  const left = [explore, travel];
   const right: Tab[] = session
     ? [
         { href: "/kudos", label: "Kudos", icon: WalletIcon, active: pathname.startsWith("/kudos") },

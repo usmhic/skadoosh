@@ -84,7 +84,7 @@ understandable currency.
 ### Navigation
 
 Signed-out visitors land on a **landing page** at `/`. It has a hero with a collage of real work and a
-real trip, the four ways to support, a Trips feature section, a gallery preview, and a closing call to
+travel collection, the four ways to support, a gallery preview, a travel collections section, and a closing call to
 action. Members go straight to the gallery.
 
 A few destinations, always visible:
@@ -92,15 +92,15 @@ A few destinations, always visible:
 | Destination | Purpose |
 |---|---|
 | **Explore** (`/` for members, `/explore` for everyone) | The gallery: every medium, filtered by chips, sorted by mode |
-| **Trips** (`/trips`) | Plan journeys on a map, and browse public ones. See [TRIPS.md](./TRIPS.md) |
+| **Travel** (`/travel`) | Travel collections: photos and stories pinned to the places the work was made. See [TRAVEL.md](./TRAVEL.md) |
 | **Studio** (`/studio`) | Make things, plus a "Needs you" inbox and your trips |
 | **Kudos** (`/kudos`) | Your wallet: Hot, Cold, backings, licences you hold, history, and optionally your own wallet |
 | **How it works** (`/how-it-works`, signed out) | The four ways to support, verification, originality, and on-chain Kudos in plain words |
 
-The header holds a search button (⌘K / Ctrl K opens a command palette over creators, pieces, and trips),
-the **Hot · Cold** chip, a gradient **Create** menu (project, trip, writing, collection),
+The header holds a search button (⌘K / Ctrl K opens a command palette over creators, pieces, and travel collections),
+the **Hot · Cold** chip, a gradient **Create** menu (project, writing, photo collection, travel collection),
 notifications, and the account menu (with language and theme). On phones, a floating bottom tab bar
-holds Explore, Trips, Create, Kudos, and Studio. New members go through `/welcome` (you, what you make,
+holds Explore, Travel, Create, Kudos, and Studio. New members go through `/welcome` (you, what you make,
 verify).
 
 ### Explore
@@ -164,15 +164,14 @@ Reputation is computed live from what happened. There is no single number to gam
 | **Early believer** | Projects this person backed during *Idea* that went on to ship | Rewards taste and turns supporters into curators |
 | **Process posts** | Updates published on their projects | Shows the work being made by a human |
 
-### Trips (`/trips`, `/trips/:id`)
+### Travel collections (`/travel`, `/travel/:id`)
 
-Creative work often involves going somewhere: field research, a tour, a shoot, a sketching ride. A
-trip is an ordered list of stops on a map with real routes between them, organised into days. The
-planner puts the stop list beside a full-height map on desktop, and the map above the plan on
-phones. You can search places or tap the map, drag pins, reorder stops, switch how you travel, and
-reorder stops for the shortest route with **Best order**. You can also set days, stay times, and notes,
-share the trip (private, link only, or public), copy someone's public trip, download GPX, and link the
-trip to a project, which shows it under "The journey". Full details are in [TRIPS.md](./TRIPS.md).
+Some work starts on the road: a sketchbook ride, a field recording walk, the research trip behind a
+book. A travel collection is a gallery item made of places in the order they happened, each with
+photos and a story, on a map with the journey drawn between them. Photo pins show each place's
+first photo, and photos open in a lightbox. Collections appear in the Explore gallery, on profiles
+(Travel tab), and on linked project pages ("Places behind this work"). It isn't an itinerary
+planner: there are no days, schedules, or route optimisation. Full details are in [TRAVEL.md](./TRAVEL.md).
 
 ### Mediums
 
@@ -260,7 +259,7 @@ skaddosh is for original human creative work.
 |---|---|---|
 | **1: Foundations** | Hot/Cold ledger, giving to pieces and projects, backing with stage weights, milestones and releases, returns with caps, cancel-and-thaw, 48-hour change of heart, weekly allowance, project pages, process log, open roles, follows, reputation signals, Discover modes, wallet page, AI disclosure | Done |
 | 2: Ownership | Gallery and mediums, new identity, contributor agreements and splits, licences and certificates, identity verification, Kudos as an ERC-20 on Base, CreativeRegistry attestations, mobile Explore, Project, Kudos, and Verify | Done |
-| **3: Redesign and Trips** | New identity from the brand mark, landing page, command-palette search, Create menu, floating mobile tab bar, trip planning with OpenRouteService and Leaflet, trips on project pages and in the app | **This change** |
+| **3: Redesign and travel collections** | New identity from the brand mark, landing page, command-palette search, Create menu, floating mobile tab bar, travel collections (photos and stories on a Leaflet map, with OpenRouteService place search and journey lines) in the gallery, on profiles and projects, and in the app | **This change** |
 | 4: Community | Critique threads and monthly prompts per medium, stewards, project↔piece linking | Next |
 | 4: Trust | Automatic thaw for dormant projects (no update in 90 days), reports and moderation, weighting new accounts' Kudos lower in reputation | Planned |
 | 5: Sustainability | Creator payouts (KYC, region rules, legal review), memberships for released projects, mobile parity | Planned |

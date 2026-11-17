@@ -56,13 +56,13 @@ export function primaryNav(signedIn: boolean): NavItem[] {
     icon: CompassIcon,
     match: (p) => (signedIn && p === "/") || p.startsWith("/explore") || p.startsWith("/read") || p.startsWith("/projects"),
   };
-  const trips: NavItem = { href: "/trips", label: "Trips", icon: MapIcon, match: (p) => p.startsWith("/trips") };
+  const travel: NavItem = { href: "/travel", label: "Travel", icon: MapIcon, match: (p) => p.startsWith("/travel") };
   if (!signedIn) {
-    return [explore, trips, { href: "/how-it-works", label: "How it works", icon: BookOpenIcon, match: (p) => p.startsWith("/how-it-works") }];
+    return [explore, travel, { href: "/how-it-works", label: "How it works", icon: BookOpenIcon, match: (p) => p.startsWith("/how-it-works") }];
   }
   return [
     explore,
-    trips,
+    travel,
     { href: "/studio", label: "Studio", icon: PenToolIcon, match: (p) => p.startsWith("/studio") },
     { href: "/kudos", label: "Kudos", icon: WalletIcon, match: (p) => p.startsWith("/kudos") },
   ];
@@ -171,7 +171,7 @@ function SearchTrigger({ onOpen }: { onOpen: () => void }) {
   );
 }
 
-/** A command-palette style search over creators, pieces, and public trips. */
+/** A command-palette style search over creators, pieces, and public travel collections. */
 function SearchDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const router = useRouter();
   const { t } = useTranslation();
@@ -224,7 +224,7 @@ function SearchDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (op
             value={value}
             onChange={(e) => setValue(e.target.value)}
             placeholder={t("read.searchPlaceholder")}
-            aria-label="Search creators, pieces, and trips"
+            aria-label="Search creators, pieces, and travel collections"
             className="h-14 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground"
           />
           {loading ? <Loader2Icon className="size-4 animate-spin text-muted-foreground" /> : null}
@@ -235,7 +235,7 @@ function SearchDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (op
             <div className="grid gap-1 p-1 sm:grid-cols-2">
               {[
                 { href: "/", label: "Explore the gallery", icon: CompassIcon },
-                { href: "/trips", label: "Browse trips", icon: MapIcon },
+                { href: "/travel", label: "Travel collections", icon: MapIcon },
                 { href: "/read", label: "Read pieces", icon: BookOpenIcon },
                 { href: "/how-it-works", label: "How skaddosh works", icon: FileTextIcon },
               ].map(({ href, label, icon: Icon }) => (
@@ -259,9 +259,9 @@ function SearchDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (op
                   </ResultRow>
                 ))}
               </ResultGroup>
-              <ResultGroup title="Trips" show={tripMatches.length > 0}>
+              <ResultGroup title="Travel" show={tripMatches.length > 0}>
                 {tripMatches.map((tr) => (
-                  <ResultRow key={tr.id} onSelect={() => go(`/trips/${tr.id}`)} title={tr.title} subtitle={[tr.from, tr.to].filter(Boolean).join(" → ")}>
+                  <ResultRow key={tr.id} onSelect={() => go(`/travel/${tr.id}`)} title={tr.title} subtitle={[tr.from, tr.to].filter(Boolean).join(" → ")}>
                     <span className="flex size-8 items-center justify-center rounded-lg text-white" style={{ background: tr.accentColor }}>
                       <MapIcon className="size-4" />
                     </span>
@@ -315,16 +315,16 @@ function ResultRow({ title, subtitle, onSelect, children }: { title: string; sub
   );
 }
 
-/** One place to start anything: a project, a trip, a piece, or a photo collection. */
+/** One place to start anything: a project, a piece, a photo collection, or a travel collection. */
 export function CreateMenu({ compact = false }: { compact?: boolean }) {
   const router = useRouter();
   const [dialogType, setDialogType] = useState<"article" | "project" | "gallery" | null>(null);
-  const createTrip = trpc.trips.create.useMutation({ onSuccess: ({ id }) => router.push(`/trips/${id}`) });
+  const createTrip = trpc.trips.create.useMutation({ onSuccess: ({ id }) => router.push(`/travel/${id}`) });
   const items = [
     { key: "project", label: "Project", hint: "Show work in progress and find backers", icon: FolderOpenIcon, onSelect: () => setDialogType("project") },
-    { key: "trip", label: "Trip", hint: "Plan a route on the map", icon: MapIcon, onSelect: () => createTrip.mutate({}) },
     { key: "article", label: "Writing", hint: "A story, essay, or poem", icon: FileTextIcon, onSelect: () => setDialogType("article") },
-    { key: "gallery", label: "Collection", hint: "A set of photos or images", icon: ImageIcon, onSelect: () => setDialogType("gallery") },
+    { key: "gallery", label: "Photo collection", hint: "A set of photos or images", icon: ImageIcon, onSelect: () => setDialogType("gallery") },
+    { key: "trip", label: "Travel collection", hint: "Photos and stories pinned on a map", icon: MapIcon, onSelect: () => createTrip.mutate({}) },
   ] as const;
   return (
     <>
@@ -381,8 +381,8 @@ function UserMenu({ name, email, image, username }: { name: string; email: strin
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
-          <Link href="/trips">
-            <MapIcon /> Your trips
+          <Link href="/travel">
+            <MapIcon /> Your travel
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>

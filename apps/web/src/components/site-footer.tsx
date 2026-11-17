@@ -5,8 +5,8 @@ const COLUMNS = [
   {
     title: "Discover",
     links: [
-      { href: "/", label: "Explore" },
-      { href: "/trips", label: "Trips" },
+      { href: "/explore", label: "Explore" },
+      { href: "/travel", label: "Travel" },
       { href: "/read", label: "Read" },
     ],
   },
@@ -14,7 +14,7 @@ const COLUMNS = [
     title: "Create",
     links: [
       { href: "/studio", label: "Studio" },
-      { href: "/trips", label: "Plan a trip" },
+      { href: "/travel", label: "Travel collections" },
       { href: "/portfolio/edit", label: "Portfolio" },
     ],
   },

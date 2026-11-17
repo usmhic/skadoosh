@@ -1,6 +1,6 @@
 /**
- * Pure trip-planning helpers shared by the API and clients (`@skaddosh/api/trips`). No I/O.
- * Limits mirror the hosted OpenRouteService restrictions (docs/TRIPS.md).
+ * Pure helpers for travel collections, shared by the API and clients (`@skaddosh/api/trips`).
+ * No I/O. Limits mirror the hosted OpenRouteService restrictions (docs/TRAVEL.md).
  */
 
 export const TRAVEL_MODE_INFO = {
@@ -14,20 +14,10 @@ export const TRAVEL_MODE_INFO = {
 } as const;
 export type TravelModeKey = keyof typeof TRAVEL_MODE_INFO;
 
-export const STOP_KIND_INFO = {
-  place: { label: "Place" },
-  stay: { label: "Stay" },
-  food: { label: "Food" },
-  sight: { label: "Sight" },
-  transport: { label: "Transport" },
-} as const;
-export type StopKindKey = keyof typeof STOP_KIND_INFO;
-
 export const TRIP_LIMITS = {
   /** ORS directions accept at most 50 waypoints per request. */
   MAX_STOPS: 50,
-  MAX_DAYS: 60,
-  MAX_STAY_MINUTES: 24 * 60,
+  MAX_PHOTOS_PER_PLACE: 12,
 } as const;
 
 export type LatLng = { lat: number; lng: number };
@@ -84,35 +74,6 @@ export function formatDuration(seconds: number | null | undefined): string {
   // Past ten hours, minutes are noise: "73 h" reads better than "73 h 25 min".
   if (h >= 10) return `${Math.round(minutes / 60)} h`;
   return m ? `${h} h ${m} min` : `${h} h`;
-}
-
-export type DayPlan = {
-  day: number;
-  stopIndexes: number[];
-  /** Travel into this day's stops (the leg arriving at each stop belongs to that stop's day). */
-  distance: number;
-  duration: number;
-  stayMinutes: number;
-};
-
-/**
- * Group stops into days. The leg arriving at a stop counts toward that stop's day, so a day's
- * totals are the travel you do that day. `legs[i]` goes from stop i to stop i + 1.
- */
-export function planDays(stops: Array<{ day: number; stayMinutes: number }>, legs: Leg[] | null): DayPlan[] {
-  const byDay = new Map<number, DayPlan>();
-  stops.forEach((stop, index) => {
-    const plan = byDay.get(stop.day) ?? { day: stop.day, stopIndexes: [], distance: 0, duration: 0, stayMinutes: 0 };
-    plan.stopIndexes.push(index);
-    plan.stayMinutes += stop.stayMinutes;
-    const arriving = index > 0 ? legs?.[index - 1] : undefined;
-    if (arriving) {
-      plan.distance += arriving.distance;
-      plan.duration += arriving.duration;
-    }
-    byDay.set(stop.day, plan);
-  });
-  return [...byDay.values()].sort((a, b) => a.day - b.day);
 }
 
 /** The bounding box of a set of points, padded so markers never sit on the map's edge. */

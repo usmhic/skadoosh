@@ -1418,7 +1418,7 @@ export async function runSeed() {
   await reconcileDemoLedger([...DEMO_USERS.map((demoUser) => demoUser.id), OWNER_SEED_ID]);
 
   console.log(
-    `[skaddosh] Demo seed ready: ${DEMO_USERS.length} users, ${DEMO_WORKS.length} works, ${DEMO_PROJECT_COUNT} projects, ${DEMO_LICENSE_COUNT} licences, ${DEMO_TRIP_COUNT} trips, ${DEMO_PORTFOLIOS.length} portfolios, ${DEMO_ANALYTICS.length} analytics events.`,
+    `[skaddosh] Demo seed ready: ${DEMO_USERS.length} users, ${DEMO_WORKS.length} works, ${DEMO_PROJECT_COUNT} projects, ${DEMO_LICENSE_COUNT} licences, ${DEMO_TRIP_COUNT} travel collections, ${DEMO_PORTFOLIOS.length} portfolios, ${DEMO_ANALYTICS.length} analytics events.`,
   );
 }
 

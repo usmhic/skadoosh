@@ -127,9 +127,6 @@ export const travelModeEnum = pgEnum("travel_mode", TRAVEL_MODES);
 export const TRIP_VISIBILITIES = ["private", "unlisted", "public"] as const;
 export type TripVisibility = (typeof TRIP_VISIBILITIES)[number];
 export const tripVisibilityEnum = pgEnum("trip_visibility", TRIP_VISIBILITIES);
-export const STOP_KINDS = ["place", "stay", "food", "sight", "transport"] as const;
-export type StopKind = (typeof STOP_KINDS)[number];
-export const stopKindEnum = pgEnum("stop_kind", STOP_KINDS);
 
 export const contentAccessStatusEnum = pgEnum("content_access_status", [
   "pending",
@@ -646,10 +643,13 @@ export const chainOperation = pgTable(
   ],
 );
 
-// ── trips ─────────────────────────────────────────────────────────────────────
-// A trip is an ordered list of stops plus the last route OpenRouteService computed for them.
-// The route is a cache: `routeKey` hashes the mode and stop coordinates it was computed for,
-// so the API knows when it's stale without calling ORS again (docs/TRIPS.md).
+// ── travel collections ────────────────────────────────────────────────────────
+// A travel collection is a gallery of places: photos and stories pinned where they were made,
+// in the order they happened, with an optional journey line between them. Tables keep their
+// original names (`trip`, `trip_stop`). The journey line is a cache: `routeKey` hashes the mode
+// and place coordinates it was computed for, so the API knows when it's stale (docs/TRAVEL.md).
+
+export type PlacePhoto = { url: string; caption: string };
 
 export const trip = pgTable(
   "trip",
@@ -665,6 +665,8 @@ export const trip = pgTable(
     mode: travelModeEnum("mode").notNull().default("driving-car"),
     visibility: tripVisibilityEnum("visibility").notNull().default("private"),
     accentColor: text("accent_color").notNull().default("#6d4aff"),
+    coverImage: text("cover_image"),
+    // When the journey happened (shown as month and year).
     startDate: date("start_date"),
     // Cached route: [[lng, lat], …], per-leg totals, and overall totals.
     routeGeometry: jsonb("route_geometry").$type<Array<[number, number]>>(),
@@ -698,10 +700,9 @@ export const tripStop = pgTable(
     address: text("address").notNull().default(""),
     lat: doublePrecision("lat").notNull(),
     lng: doublePrecision("lng").notNull(),
-    kind: stopKindEnum("kind").notNull().default("place"),
-    day: integer("day").notNull().default(1),
-    stayMinutes: integer("stay_minutes").notNull().default(0),
+    // The story of this place (shown as "Story"; column name kept from the planner).
     notes: text("notes").notNull().default(""),
+    photos: jsonb("photos").$type<PlacePhoto[]>().notNull().default([]),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("trip_stop_trip_position_idx").on(t.tripId, t.position)],
