@@ -126,7 +126,7 @@ jobs:
         if: always()
         run: rm -f "$RUNNER_TEMP/internal.keystore" "$RUNNER_TEMP/firebase-service-account.json"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: skadoosh-android-dev-${{ github.run_number }}
           path: apps/mobile/android/app/build/outputs/apk/release/*.apk

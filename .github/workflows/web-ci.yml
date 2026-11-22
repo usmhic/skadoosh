@@ -54,7 +54,7 @@ jobs:
 
       - name: Upload check logs
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: web-check-logs
           path: ci-logs/*.log
