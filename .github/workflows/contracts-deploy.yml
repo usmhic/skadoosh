@@ -60,7 +60,7 @@ jobs:
         working-directory: .
         run: echo "::notice::Environment '$NETWORK' has no DEPLOYER_PRIVATE_KEY/CHAIN_RPC_URL yet. Skipping deployment."
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         if: env.HAS_KEY == 'true'
         with:
           submodules: recursive
