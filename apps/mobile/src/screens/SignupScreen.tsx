@@ -12,7 +12,7 @@ import { theme as T } from "@/lib/theme";
 import type { RootStackParams } from "@/navigation";
 
 type P = NativeStackScreenProps<RootStackParams, "Signup">;
-const BRAND_ICON = require("../../assets/brand/logo.png");
+const BRAND_ICON = require("../../assets/brand/mark.png");
 
 export function SignupScreen({ navigation }: P) {
   const { t } = useTranslation();

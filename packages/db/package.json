@@ -18,7 +18,8 @@
     "db:migrate": "node ../../scripts/with-root-env.mjs tsx src/migrate.ts",
     "db:push": "node ../../scripts/with-root-env.mjs tsx src/ensure-db.ts && node ../../scripts/with-root-env.mjs drizzle-kit push",
     "db:seed": "node ../../scripts/with-root-env.mjs tsx src/seed.ts",
-    "db:studio": "node ../../scripts/with-root-env.mjs drizzle-kit studio"
+    "db:studio": "node ../../scripts/with-root-env.mjs drizzle-kit studio",
+    "lint": "tsc --noEmit"
   },
   "dependencies": {
     "drizzle-orm": "0.45.2",

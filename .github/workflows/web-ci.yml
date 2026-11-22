@@ -21,31 +21,45 @@ concurrency:
 
 jobs:
   typecheck:
-    name: Type check
+    name: Checks
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - run: node scripts/check-env.mjs
 
       - uses: pnpm/action-setup@v4
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: "24.18.0"
           cache: pnpm
+
+      - name: Verify CI log runner
+        run: node scripts/ci-check.mjs log-runner node --test scripts/ci-check.test.mjs
+
+      - name: Check environment template
+        run: node scripts/ci-check.mjs environment node scripts/check-env.mjs
 
       - run: pnpm install --frozen-lockfile --ignore-scripts
 
-      - run: |
-          ./node_modules/.bin/tsc -p packages/db/tsconfig.json   --noEmit
-          ./node_modules/.bin/tsc -p packages/api/tsconfig.json  --noEmit
-          ./node_modules/.bin/tsc -p packages/auth/tsconfig.json --noEmit
-          ./node_modules/.bin/tsc -p apps/web/tsconfig.json      --noEmit
+      - run: node scripts/ci-check.mjs types pnpm lint
 
-      - run: pnpm lint
+      - run: node scripts/ci-check.mjs tests pnpm test
 
-      - run: pnpm test
+      - name: Production build
+        env:
+          DATABASE_URL: postgresql://build@localhost/stub
+          BETTER_AUTH_URL: http://localhost:3000
+          NEXT_PUBLIC_APP_URL: http://localhost:3000
+        run: node scripts/ci-check.mjs build pnpm build
+
+      - name: Upload check logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-check-logs
+          path: ci-logs/*.log
+          retention-days: 14
+          if-no-files-found: warn
 
   docker:
     name: Build and push
@@ -56,7 +70,7 @@ jobs:
       packages: write
     if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
     outputs:
-      tags:   ${{ steps.meta.outputs.tags }}
+      tags: ${{ steps.meta.outputs.tags }}
       digest: ${{ steps.build.outputs.digest }}
     env:
       APP_URL: ${{ vars.NEXT_PUBLIC_APP_URL || 'https://skadoosh.osas.cloud' }}

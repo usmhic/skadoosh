@@ -255,8 +255,8 @@ This is a pnpm workspace, so CI installs from the **repository root**
 .github/workflows/
   mobile-android-dev.yml       dev  -> App Distribution
   mobile-ios-dev.yml           manual -> App Distribution
-  mobile-android-release.yml   main -> Play Console
-  mobile-ios-release.yml       main -> App Store Connect
+  mobile-android-release.yml   manual from dev -> Play Console
+  mobile-ios-release.yml       manual from dev -> App Store Connect
 
 apps/mobile/
   Gemfile                      fastlane + plugins

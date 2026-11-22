@@ -62,3 +62,12 @@ are manual workflows selected on `dev`, using the existing production environmen
 Version-tag GitHub releases verify that the tagged commit belongs to `dev`.
 
 Local checks and setup never require a commit or push.
+
+## Check logs and maintenance
+
+Web CI retains check output and a GitHub job summary; logs are uploaded as
+`web-check-logs` for 14 days, including failures. Local logs under `ci-logs/`
+are ignored. `scripts/ci-check.mjs` preserves the child exit status and redacts
+known secret environment values; do not deliberately print credentials.
+Scheduled dependency version PRs are paused; review dependency/security alerts
+manually on `dev`. See [docs/REVIEW_LOG.md](docs/REVIEW_LOG.md) for scope and evidence.

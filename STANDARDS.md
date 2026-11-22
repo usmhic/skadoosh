@@ -40,7 +40,7 @@ ceremonial layers.
 | Surface | Convention |
 | --- | --- |
 | Repositories | lowercase; product name; avoid separators unless readability needs one |
-| Branches | `main`, `dev`, `feat/<slug>`, `fix/<slug>`, `docs/<slug>`, `chore/<slug>` |
+| Branches | `dev` (default and release base), `feat/<slug>`, `fix/<slug>`, `docs/<slug>`, `chore/<slug>` |
 | Commits | imperative, focused, preferably Conventional Commit style |
 | Workflows | `ci.yml` for one app; `<surface>-ci.yml` for multi-app repos; `release.yml` for tags |
 | Containers | `ghcr.io/usmhic/<repo>` or `ghcr.io/usmhic/<repo>-<surface>` |
@@ -74,9 +74,9 @@ OpenAPI descriptions, and screenshots with the behavior they describe.
 - Ignore `.env`, `.env.*`, `*.env`, `*.env.*`, `.envrc`, `.direnv/`, `.flaskenv`,
   and `.streamlit/secrets.toml` at every depth. The only exception is the
   sanitized repository-root `.env.example`.
-- Keep every value in `.env.example` empty. Explain expected formats in comments
-  or documentation instead of committing realistic tokens, passwords, private
-  URLs, or runnable dummy credentials.
+- Keep secrets empty in `.env.example`. Safe localhost URLs, ports, and
+  non-secret defaults may be included so local setup is reproducible. Explain
+  formats in comments; never include tokens, passwords, or private URLs.
 - Store local, CI, staging, and production values outside Git. Fail loudly when
   a required value is missing.
 - Group variables by concern and explain non-obvious values with short comments.
@@ -94,8 +94,8 @@ and license.
 Compose is the local integration contract. Give the project a stable `name:`,
 use named volumes, health-check dependencies, keep service names predictable,
 and make destructive volume removal an explicit command in documentation.
-Images published from `main` receive `latest`; development images receive
-`dev`; immutable SHA tags are produced for traceability.
+Images published from `dev` receive `dev` and immutable SHA tags for
+traceability. There is no automatic `latest` promotion.
 
 ## CI/CD
 
@@ -103,7 +103,8 @@ All workflows:
 
 - request the smallest token permissions they need;
 - use concurrency cancellation for superseded checks and builds;
-- install from lockfiles;
+- install from lockfiles and use the exact Node/pnpm pins in `mise.toml`;
+- retain web check logs for 14 days and publish a check summary, including failures;
 - run the same checks documented for local development;
 - cache through official setup actions where useful;
 - never publish images or deploy from pull requests;
@@ -115,8 +116,12 @@ tests, and a production build appropriate to the framework. Containerized apps
 also build the production image; smoke tests are preferred when they are stable
 and reasonably fast.
 
-Dependabot checks GitHub Actions and each committed package ecosystem monthly.
-Group safe patch/minor updates when that reduces noise.
+Dependency updates are maintained manually on `dev`. Scheduled Dependabot
+version PRs are paused with `open-pull-requests-limit: 0` in each ecosystem;
+security alerts and security updates are separate GitHub settings and are not
+disabled by this configuration. Review dependency/security alerts regularly.
+To resume scheduled version PRs, raise the limit deliberately; all targets stay
+on `dev`. Group compatible patch/minor updates when appropriate.
 
 ## Security and dependencies
 
@@ -134,9 +139,10 @@ belong on private networks behind TLS-terminating infrastructure.
 
 Keep the description to one plain sentence aligned with the README, use useful
 technology and domain topics, enable private vulnerability reporting, and
-enable secret scanning/push protection where GitHub supports them. Protect
-`main`; require pull requests and passing checks; squash merge; delete merged
-branches automatically. Do not change repository visibility until the full git
+enable secret scanning/push protection where GitHub supports them. Use `dev` as the default branch and release base. Run passing checks before
+merging or pushing maintainer changes. Contributors open focused PRs to `dev`;
+squash merge and delete merged branches automatically. Do not create persistent
+bot branches. Maintainers may prepare changes directly on `dev`. Do not change repository visibility until the full git
 history has been checked for secrets.
 
 ## Releases

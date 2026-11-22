@@ -36,6 +36,8 @@ places the work was made, on a map.
 
 Local setup, shared workspace ports, environment conventions, and `dev` workflows:
 [Local development](./LOCAL_DEVELOPMENT.md).
+Review scope, validation evidence, workflow changes, and bot cleanup:
+[Review log](docs/REVIEW_LOG.md).
 
 ## 🎬 Try the demo
 
@@ -211,17 +213,16 @@ address when testing on a physical device. See [apps/mobile/](./apps/mobile).
 
 | Workflow | Trigger | What it does |
 |---|---|---|
-| `web-ci.yml` | push to `dev`, PR to `main`/`dev`, manual dispatch | type-check (all packages) + lint → Docker build/push to GHCR (push only) → Docker smoke test (PR only) |
+| `web-ci.yml` | push to `dev`, PR to `dev`, manual dispatch | type-check (all packages) + lint → Docker build/push to GHCR (push only) → Docker smoke test (PR only) |
 | `mobile-android-dev.yml` | push to `dev`, manual dispatch | type-check → signed APK → Firebase App Distribution |
 | `mobile-ios-dev.yml` | manual dispatch | signed Ad Hoc IPA → Firebase App Distribution |
-| `mobile-android-release.yml` | push to `main`, manual dispatch | signed AAB → Google Play Console |
-| `mobile-ios-release.yml` | push to `main`, manual dispatch | signed IPA → App Store Connect |
+| `mobile-android-release.yml` | manual dispatch from `dev` (production environment) | signed AAB → Google Play Console |
+| `mobile-ios-release.yml` | manual dispatch from `dev` (production environment) | signed IPA → App Store Connect |
 | `release.yml` | push of tag `v*.*.*` | creates a GitHub Release with auto-generated notes |
 | `contracts-ci.yml` | changes under `packages/contracts` | forge fmt check, build, fuzz tests, ABI drift check, Slither |
 | `contracts-deploy.yml` | manual dispatch, or push to `dev` touching contract sources | idempotent CREATE2 deploy to Base Sepolia or Base, behind environment approval; skips until secrets exist |
 
-The image is published to `ghcr.io/usmhic/skadoosh`, tagged `latest` (from `main`), by branch/tag
-ref, and `sha-<short-sha>`. Workflow concurrency is enabled, so older in-progress runs on the same
+The image is published to `ghcr.io/usmhic/skadoosh`, tagged `dev` and `sha-<short-sha>` (plus explicit release/manual tags). Workflow concurrency is enabled, so older in-progress runs on the same
 ref are cancelled automatically.
 
 Required GitHub secrets/vars:

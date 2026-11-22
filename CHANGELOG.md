@@ -52,6 +52,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Migration `0002_creative_ownership` (verification, wallets, licences, contributors, chain
   operations, mediums) with seed data, [docs/CHAIN.md](docs/CHAIN.md), and
   [docs/IDENTITY.md](docs/IDENTITY.md).
+- Logged web CI checks, pinned CI Node versions, corrected dev/release documentation, and a dated repository review/cleanup record. Scheduled dependency version PRs are paused.
 
 ### Changed
 

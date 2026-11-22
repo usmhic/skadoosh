@@ -11,7 +11,7 @@ import type { RootStackParams } from "@/navigation";
 
 type P = NativeStackScreenProps<RootStackParams, "Welcome">;
 
-const BRAND_ICON = require("../../assets/brand/logo.png");
+const BRAND_ICON = require("../../assets/brand/mark.png");
 
 export function WelcomeScreen({ navigation }: P) {
   const { t, i18n } = useTranslation();
